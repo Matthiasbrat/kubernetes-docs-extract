@@ -1,0 +1,419 @@
+# [Getting started | Kubernetes](https://kubernetes.io/docs/setup/)
+
+## Yellow
+
+- Several Kubernetes components such as kube-apiserver or kube-proxy can also be deployed as container images within the cluster.
+
+# [Production environment | Kubernetes](https://kubernetes.io/docs/setup/production-environment/)
+
+## Yellow
+
+- Creating a highly available cluster means considering: Separating the control plane from the worker nodes. Replicating the control plane components on multiple nodes. Load balancing traffic to the cluster’s API server. Having enough worker nodes available, or able to quickly become available, as changing workloads warrant it.
+- Before building a Kubernetes production environment on your own, consider handing off some or all of this job to Turnkey Cloud Solutions providers or other Kubernetes Partners. Options include: Serverless: Just run workloads on third-party equipment without managing a cluster at all. You will be charged for things like CPU usage, memory, and disk requests. Managed control plane: Let the provider manage the scale and availability of the cluster's control plane, as well as handle patches and upgrades. Managed worker nodes: Configure pools of nodes to meet your needs, then the provider makes sure those nodes are available and ready to implement upgrades when needed. Integration: There are providers that integrate Kubernetes with other services you may need, such as storage, container registries, authentication methods, and development tools.
+- Production control plane
+- Manage certificates
+- Configure load balancer for apiserver
+- Separate and backup etcd service
+- Create multiple control plane systems
+- running control plane services as pods in Kubernetes ensures that the replicated number of services that you request will always be available. The scheduler should be fault tolerant, but not highly available. Some deployment tools set up Raft consensus algorithm to do leader election of Kubernetes services. If the primary goes away, another service elects itself and take over.
+- Span multiple zones: If keeping your cluster available at all times is critical, consider creating a cluster that runs across multiple data centers, referred to as zones in cloud environments. Groups of zones are referred to as regions. By spreading a cluster across multiple zones in the same region, it can improve the chances that your cluster will continue to function even if one zone becomes unavailable.
+- Production worker nodes
+- Configure nodes: Nodes can be physical or virtual machines. If you want to create and manage your own nodes, you can install a supported operating system, then add and run the appropriate Node services. Consider: The demands of your workloads when you set up nodes by having appropriate memory, CPU, and disk speed and storage capacity available. Whether generic computer systems will do or you have workloads that need GPU processors, Windows nodes, or VM isolation. Validate nodes: See Valid node setup for information on how to ensure that a node meets the requirements to join a Kubernetes cluster. Add nodes to the cluster: If you are managing your own cluster you can add nodes by setting up your own machines and either adding them manually or having them register themselves to the cluster’s apiserver. See the Nodes section for information on how to set up Kubernetes to add nodes in these ways. Scale nodes: Have a plan for expanding the capacity your cluster will eventually need. See Considerations for large clusters to help determine how many nodes you need, based on the number of pods and containers you need to run. If you are managing nodes yourself, this can mean purchasing and installing your own physical equipment. Autoscale nodes: Read Cluster Autoscaling to learn about the tools available to automatically manage your nodes and the capacity they provide. Set up node health checks: For important workloads, you want to make sure that the nodes and pods running on those nodes are healthy. Using the Node Problem Detector daemon, you can ensure your nodes are healthy.
+- Taking on a production-quality cluster means deciding how you want to selectively allow access by other users. In particular, you need to select strategies for validating the identities of those who try to access your cluster (authentication) and deciding if they have permissions to do what they are asking (authorization):
+- Authentication: The apiserver can authenticate users using client certificates, bearer tokens, an authenticating proxy, or HTTP basic auth.
+- Using plugins, the apiserver can leverage your organization’s existing authentication methods, such as LDAP or Kerberos.
+- Authorization: When you set out to authorize your regular users, you will probably choose between RBAC and ABAC authorization.
+- Role-based access control (RBAC): Lets you assign access to your cluster by allowing specific sets of permissions to authenticated users. Permissions can be assigned for a specific namespace (Role) or across the entire cluster (ClusterRole). Then using RoleBindings and ClusterRoleBindings, those permissions can be attached to particular users.
+- Attribute-based access control (ABAC): Lets you create policies based on resource attributes in the cluster and will allow or deny access based on those attributes. Each line of a policy file identifies versioning properties (apiVersion and kind) and a map of spec properties to match the subject (user or group), resource property, non-resource property (/version or /apis), and readonly.
+- Set the authorization mode: When the Kubernetes API server (kube-apiserver) starts, supported authorization modes must be set using an --authorization-config file or the --authorization-mode flag.
+- For example, that flag in the kube-adminserver.yaml file (in /etc/kubernetes/manifests) could be set to Node,RBAC.
+- Webhooks and other special authorization types need to be enabled by adding Admission Controllers to the API server.
+- Set namespace limits: Set per-namespace quotas on things like memory and CPU.
+- Prepare for DNS demand
+- Create additional service accounts: User accounts determine what users can do on a cluster, while a service account defines pod access within a particular namespace. By default, a pod takes on the default service account from its namespace.
+
+# [Container Runtimes | Kubernetes](https://kubernetes.io/docs/setup/production-environment/container-runtimes/)
+
+## Yellow
+
+- You need to install a container runtime into each node in the cluster so that Pods can run there.
+
+## Orange
+
+- Network configuration
+
+## Yellow
+
+- By default, the Linux kernel does not allow IPv4 packets to be routed between interfaces. Most Kubernetes cluster networking implementations will change this setting
+
+## Orange
+
+- cgroup drivers
+
+## Yellow
+
+- Both the kubelet and the underlying container runtime need to interface with control groups to enforce resource management for pods and containers and set resources such as cpu/memory requests and limits. To interface with control groups, the kubelet and the container runtime need to use a cgroup driver. It's critical that the kubelet and the container runtime use the same cgroup driver and are configured the same. There are two cgroup drivers available: cgroupfs systemd
+- Two cgroup managers result in two views of the available and in-use resources in the system.
+
+# [Customizing components with the kubeadm API | Kubernetes](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/control-plane-flags/)
+
+## Orange
+
+- Customizing components with the kubeadm API
+
+## Yellow
+
+- Customizing the CoreDNS deployment of kubeadm is currently not supported. You must manually patch the kube-system/coredns ConfigMap and recreate the CoreDNS Pods after that.
+
+# [Options for Highly Available Topology | Kubernetes](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/ha-topology/)
+
+## Yellow
+
+- You can set up an HA cluster: With stacked control plane nodes, where etcd nodes are colocated with control plane nodes With external etcd nodes, where etcd runs on separate nodes from the control plane
+
+## Orange
+
+- Stacked etcd topology
+
+## Yellow
+
+- Each control plane node creates a local etcd member and this etcd member communicates only with the kube-apiserver of this node.
+- You should therefore run a minimum of three stacked control plane nodes for an HA cluster.
+
+## Orange
+
+- External etcd topology
+
+## Yellow
+
+- the kube-apiserver is exposed to worker nodes using a load balancer. However, etcd members run on separate hosts, and each etcd host communicates with the kube-apiserver of each control plane node.
+- However, this topology requires twice the number of hosts as the stacked HA topology. A minimum of three hosts for control plane nodes and three hosts for etcd nodes
+
+# [Configuring each kubelet in your cluster using kubeadm | Kubernetes](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/kubelet-integration/)
+
+## Yellow
+
+- The lifecycle of the kubeadm CLI tool is decoupled from the kubelet, which is a daemon that runs on each node within the Kubernetes cluster.
+- You can manage the configuration of your kubelets manually, but kubeadm now provides a KubeletConfiguration API
+
+## Orange
+
+- Propagating cluster-level configuration to each kubelet
+
+## Yellow
+
+- You can provide the kubelet with default values to be used by kubeadm init and kubeadm join commands.
+- If you want your services to use the subnet 10.96.0.0/12 as the default for services, you can pass the --service-cidr parameter to kubeadm: kubeadm init --service-cidr 10.96.0.0/12
+- You also need to set the DNS address used by the kubelet, using the --cluster-dns flag.
+- This setting needs to be the same for every kubelet on every manager and Node in the cluster.
+- apiVersion: kubelet.config.k8s.io/v1beta1 kind: KubeletConfiguration clusterDNS: - 10.96.0.10
+- When you call kubeadm init, the kubelet configuration is marshalled to disk
+- After marshalling these two files to disk, kubeadm attempts to run the following two commands, if you are using systemd: systemctl daemon-reload && systemctl restart kubelet
+- Kubernetes binaries and package contents The DEB and RPM packages shipped with the Kubernetes releases are: Package name Description kubeadm Installs the /usr/bin/kubeadm CLI tool and the kubelet drop-in file for the kubelet. kubelet Installs the /usr/bin/kubelet binary. kubectl Installs the /usr/bin/kubectl binary. cri-tools Installs the /usr/bin/crictl binary from the cri-tools git repository. kubernetes-cni Installs the /opt/cni/bin binaries from the plugins git repository.
+
+# [Considerations for large clusters | Kubernetes](https://kubernetes.io/docs/setup/best-practices/cluster-large/)
+
+## Yellow
+
+- A cluster is a set of nodes (physical or virtual machines) running Kubernetes agents, managed by the control plane. Kubernetes v1.32 supports clusters with up to 5,000 nodes. More specifically, Kubernetes is designed to accommodate configurations that meet all of the following criteria: No more than 110 pods per node No more than 5,000 nodes No more than 150,000 total pods No more than 300,000 total containers
+- For a large cluster, you need a control plane with sufficient compute and other resources. Typically you would run one or two control plane instances per failure zone, scaling those instances vertically first and then scaling horizontally after reaching the point of falling returns to (vertical) scale. You should run at least one instance per failure zone to provide fault-tolerance. Kubernetes nodes do not automatically steer traffic towards control-plane endpoints that are in the same failure zone; however, your cloud provider might have its own mechanisms to do this. For example, using a managed load balancer, you configure the load balancer to send traffic that originates from the kubelet and Pods in failure zone A, and direct that traffic only to the control plane hosts that are also in zone A. If a single control-plane host or endpoint failure zone A goes offline, that means that all the control-plane traffic for nodes in zone A is now being sent between zones. Running multiple control plane hosts in each zone makes that outcome less likely.
+- To improve performance of large clusters, you can store Event objects in a separate dedicated etcd instance. When creating a cluster, you can (using custom tooling): start and configure additional etcd instance configure the API server to use it for storing events
+- To avoid running into cluster addon resource issues, when creating a cluster with many nodes, consider the following
+- Some addons scale vertically
+- Many addons scale horizontally
+- Some addons run as one copy per node, controlled by a DaemonSet
+
+# [Running in multiple zones | Kubernetes](https://kubernetes.io/docs/setup/best-practices/multiple-zones/)
+
+## Yellow
+
+- Kubernetes is designed so that a single Kubernetes cluster can run across multiple failure zones, typically where these zones fit within a logical grouping called a region. Major cloud providers define a region as a set of failure zones (also called availability zones) that provide a consistent set of features: within a region, each zone offers the same APIs and services. Typical cloud architectures aim to minimize the chance that a failure in one zone also impairs services in another zone.
+- All control plane components support running as a pool of interchangeable resources, replicated per component. When you deploy a cluster control plane, place replicas of control plane components across multiple failure zones. If availability is an important concern, select at least three failure zones and replicate each individual control plane component (API server, scheduler, etcd, cluster controller manager) across at least three failure zones. If you are running a cloud controller manager then you should also replicate this across all the failure zones you selected.
+- Kubernetes automatically spreads the Pods for workload resources (such as Deployment or StatefulSet) across different nodes in a cluster. This spreading helps reduce the impact of failures. When nodes start up, the kubelet on each node automatically adds labels to the Node object that represents that specific kubelet in the Kubernetes API. These labels can include zone information.
+- If your cluster spans multiple zones or regions, you can use node labels in conjunction with Pod topology spread constraints to control how Pods are spread across your cluster among fault domains
+- Distributing nodes across zones Kubernetes' core does not create nodes for you; you need to do that yourself, or use a tool such as the Cluster API to manage nodes on your behalf. Using tools such as the Cluster API you can define sets of machines to run as worker nodes for your cluster across multiple failure domains, and rules to automatically heal the cluster in case of whole-zone service disruption.
+- When persistent volumes are created, Kubernetes automatically adds zone labels to any PersistentVolumes that are linked to a specific zone. The scheduler then ensures, through its NoVolumeZoneConflict predicate, that pods which claim a given PersistentVolume are only placed into the same zone as that volume.
+- By itself, Kubernetes does not include zone-aware networking. You can use a network plugin to configure cluster networking, and that network solution might have zone-specific elements. For example, if your cloud provider supports Services with type=LoadBalancer, the load balancer might only send traffic to Pods running in the same zone as the load balancer element processing a given connection
+
+# [Validate node setup | Kubernetes](https://kubernetes.io/docs/setup/best-practices/node-conformance/)
+
+## Yellow
+
+- Node conformance test is a containerized test framework that provides a system verification and functionality test for a node. The test validates whether the node meets the minimum requirements for Kubernetes; a node that passes the test is qualified to join a Kubernetes cluster.
+- At a minimum, the node should have the following daemons installed: CRI-compatible container runtimes such as Docker, containerd and CRI-O kubelet
+- To run the node conformance test, perform the following steps: Work out the value of the --kubeconfig option for the kubelet; for example: --kubeconfig=/var/lib/kubelet/config.yaml. Because the test framework starts a local control plane to test the kubelet, use http://localhost:8080 as the URL of the API server. There are some other kubelet command line parameters you may want to use: --cloud-provider: If you are using --cloud-provider=gce, you should remove the flag to run the test. Run the node conformance test with command: # $CONFIG_DIR is the pod manifest path of your kubelet. # $LOG_DIR is the test output path. sudo docker run -it --rm --privileged --net=host \ -v /:/rootfs -v $CONFIG_DIR:$CONFIG_DIR -v $LOG_DIR:/var/result \ registry.k8s.io/node-test:0.2
+- Kubernetes also provides node conformance test docker images for other architectures: Arch Image amd64 node-test-amd64 arm node-test-arm arm64 node-test-arm64
+
+# [Enforcing Pod Security Standards | Kubernetes](https://kubernetes.io/docs/setup/best-practices/enforcing-pod-security-standards/)
+
+## Yellow
+
+- The Pod Security Admission Controller intends to replace the deprecated PodSecurityPolicies.
+- Namespaces that lack any configuration at all should be considered significant gaps in your cluster security model. We recommend taking the time to analyze the types of workloads occurring in each namespace, and by referencing the Pod Security Standards, decide on an appropriate level for each of them. Unlabeled namespaces should only indicate that they've yet to be evaluated.
+- For workloads running in those permissive namespaces, maintain documentation about their unique security requirements. If at all possible, consider how those requirements could be further constrained.
+- The audit and warn modes of the Pod Security Standards admission controller make it easy to collect important security insights about your pods without breaking existing workloads.
+- If you expect workload authors to make changes to fit within the desired level, enable the warn mode. If you expect to use audit logs to monitor/drive changes to fit within the desired level, enable the audit mode.
+- setting them to the desired level and version you would eventually like to enforce.
+- Other alternatives for enforcing security profiles are being developed in the Kubernetes ecosystem: Kubewarden. Kyverno. OPA Gatekeeper.
+
+# [PKI certificates and requirements | Kubernetes](https://kubernetes.io/docs/setup/best-practices/certificates/)
+
+## Yellow
+
+- Kubernetes requires PKI certificates for authentication over TLS.
+- Kubernetes requires PKI for the following operations: Server certificates Server certificate for the API server endpoint Server certificate for the etcd server Server certificates for each kubelet (every node runs a kubelet) Optional server certificate for the front-proxy Client certificates Client certificates for each kubelet, used to authenticate to the API server as a client of the Kubernetes API Client certificate for each API server, used to authenticate to etcd Client certificate for the controller manager to securely communicate with the API server Client certificate for the scheduler to securely communicate with the API server Client certificates, one for each node, for kube-proxy to authenticate to the API server Optional client certificates for administrators of the cluster to authenticate to the API server Optional client certificate for the front-proxy Kubelet's server and client certificates To establish a secure connection and authenticate itself to the kubelet, the API Server requires a client certificate and key pair. In this scenario, there are two approaches for certificate usage: Shared Certificates: The kube-apiserver can utilize the same certificate and key pair it uses to authenticate its clients. This means that the existing certificates, such as apiserver.crt and apiserver.key, can be used for communicating with the kubelet servers. Separate Certificates: Alternatively, the kube-apiserver can generate a new client certificate and key pair to authenticate its communication with the kubelet servers. In this case, a distinct certificate named kubelet-client.crt and its corresponding private key, kubelet-client.key are created.
+- most certificates are stored in /etc/kubernetes/pki
+- exception of user account certificates which kubeadm places in /etc/kubernetes
+
+# [Overview | Kubernetes](https://kubernetes.io/docs/concepts/overview/)
+
+## Yellow
+
+- Kubernetes is a portable, extensible, open source platform for managing containerized workloads and services, that facilitates both declarative configuration and automation.
+- The name Kubernetes originates from Greek, meaning helmsman or pilot. K8s as an abbreviation results from counting the eight letters between the "K" and the "s". Google open-sourced the Kubernetes project in 2014. Kubernetes combines over 15 years of Google's experience running production workloads at scale with best-of-breed ideas and practices from the community.
+- However, Kubernetes is not monolithic, and these default solutions are optional and pluggable.
+- Additionally, Kubernetes is not a mere orchestration system. In fact, it eliminates the need for orchestration. The technical definition of orchestration is execution of a defined workflow: first do A, then B, then C. In contrast, Kubernetes comprises a set of independent, composable control processes that continuously drive the current state towards the provided desired state. It shouldn't matter how you get from A to C. Centralized control is also not required. This results in a system that is easier to use and more powerful, robust, resilient, and extensible.
+
+# [Kubernetes Components | Kubernetes](https://kubernetes.io/docs/concepts/overview/components/)
+
+## Yellow
+
+- A Kubernetes cluster consists of a control plane and one or more worker nodes. Here's a brief overview of the main components:
+- Control Plane Components Manage the overall state of the cluster: kube-apiserver The core component server that exposes the Kubernetes HTTP API etcd Consistent and highly-available key value store for all API server data kube-scheduler Looks for Pods not yet bound to a node, and assigns each Pod to a suitable node. kube-controller-manager Runs controllers to implement Kubernetes API behavior. cloud-controller-manager (optional) Integrates with underlying cloud provider(s).
+- Node Components Run on every node, maintaining running pods and providing the Kubernetes runtime environment: kubelet Ensures that Pods are running, including their containers. kube-proxy (optional) Maintains network rules on nodes to implement Services. Container runtime Software responsible for running containers.
+- Addons Addons extend the functionality of Kubernetes. A few important examples include: DNS For cluster-wide DNS resolution Web UI (Dashboard) For cluster management via a web interface Container Resource Monitoring For collecting and storing container metrics Cluster-level Logging For saving container logs to a central log store
+
+# [Objects In Kubernetes | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/)
+
+## Yellow
+
+- Kubernetes objects are persistent entities in the Kubernetes system. Kubernetes uses these entities to represent the state of your cluster. Specifically, they can describe: What containerized applications are running (and on which nodes) The resources available to those applications The policies around how those applications behave, such as restart policies, upgrades, and fault-tolerance
+- A Kubernetes object is a "record of intent"--once you create the object, the Kubernetes system will constantly work to ensure that the object exists. By creating an object, you're effectively telling the Kubernetes system what you want your cluster's workload to look like; this is your cluster's desired state. To work with Kubernetes objects—whether to create, modify, or delete them—you'll need to use the Kubernetes API. When you use the kubectl command-line interface, for example, the CLI makes the necessary Kubernetes API calls for you.
+- Object spec and status Almost every Kubernetes object includes two nested object fields that govern the object's configuration: the object spec and the object status. For objects that have a spec, you have to set this when you create the object, providing a description of the characteristics you want the resource to have: its desired state. The status describes the current state of the object, supplied and updated by the Kubernetes system and its components. The Kubernetes control plane continually and actively manages every object's actual state to match the desired state you supplied.
+- When you create an object in Kubernetes, you must provide the object spec that describes its desired state, as well as some basic information about the object (such as a name). When you use the Kubernetes API to create the object (either directly or via kubectl), that API request must include that information as JSON in the request body.
+- apiVersion: apps/v1 kind: Deployment metadata: name: nginx-deployment spec: selector: matchLabels: app: nginx replicas: 2 # tells deployment to run 2 pods matching the template template: metadata: labels: app: nginx spec: containers: - name: nginx image: nginx:1.14.2 ports: - containerPort: 80
+- One way to create a Deployment using a manifest file like the one above is to use the kubectl apply command in the kubectl command-line interface, passing the .yaml file as an argument. Here's an example: kubectl apply -f https://k8s.io/examples/application/deployment.yaml The output is similar to this: deployment.apps/nginx-deployment created
+- Required fields
+- apiVersion - Which version of the Kubernetes API you're using to create this object kind - What kind of object you want to create metadata - Data that helps uniquely identify the object, including a name string, UID, and optional namespace spec - What state you desire for the object
+- The kubectl tool uses the --validate flag to set the level of field validation. It accepts the values ignore, warn, and strict while also accepting the values true (equivalent to strict) and false (equivalent to ignore). The default validation setting for kubectl is --validate=true.
+- Kubernetes 1.27 and later versions always offer field validation; older Kubernetes releases might not.
+
+# [Kubernetes Object Management | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/object-management/)
+
+## Yellow
+
+- Warning: A Kubernetes object should be managed using only one technique. Mixing and matching techniques for the same object results in undefined behavior.
+- Imperative commands When using imperative commands, a user operates directly on live objects in a cluster.
+- it provides no history of previous configurations.
+- kubectl create deployment nginx --image nginx
+- Imperative object configuration In imperative object configuration, the kubectl command specifies the operation (create, replace, etc.), optional flags and at least one file name. The file specified must contain a full definition of the object in YAML or JSON format.
+- kubectl create -f nginx.yaml
+- Declarative object configuration When using declarative object configuration, a user operates on object configuration files stored locally, however the user does not define the operations to be taken on the files. Create, update, and delete operations are automatically detected per-object by kubectl. This enables working on directories, where different operations might be needed for different objects.
+- This is possible by using the patch API operation to write only observed differences, instead of using the replace API operation to replace the entire object configuration.
+- kubectl diff -f configs/ kubectl apply -f configs/ Recursively process directories: kubectl diff -R -f configs/ kubectl apply -R -f configs/
+
+# [Object Names and IDs | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/names/)
+
+## Yellow
+
+- Each object in your cluster has a Name that is unique for that type of resource. Every Kubernetes object also has a UID that is unique across your whole cluster.
+- For example, you can only have one Pod named myapp-1234 within the same namespace, but you can have one Pod and one Deployment that are each named myapp-1234. For non-unique user-provided attributes, Kubernetes provides labels and annotations.
+- Names A client-provided string that refers to an object in a resource URL, such as /api/v1/pods/some-name.
+- Names must be unique across all API versions of the same resource. API resources are distinguished by their API group, resource type, namespace (for namespaced resources), and name. In other words, API version is irrelevant in this context.
+- In cases when objects represent a physical entity, like a Node representing a physical host, when the host is re-created under the same name without deleting and re-creating the Node, Kubernetes treats the new host as the old one, which may lead to inconsistencies.
+- The server may generate a name when generateName is provided instead of name in a resource create request.
+- it may conflict with existing names resulting in a HTTP 409 response. This became far less likely to happen in Kubernetes v1.31 and later, since the server will make up to 8 attempt to generate a unique name before returning a HTTP 409 response.
+- DNS Subdomain Names Most resource types require a name that can be used as a DNS subdomain name as defined in RFC 1123. This means the name must: contain no more than 253 characters contain only lowercase alphanumeric characters, '-' or '.' start with an alphanumeric character end with an alphanumeric character
+- Some resource types require their names to be able to be safely encoded as a path segment.
+- UIDs A Kubernetes systems-generated string to uniquely identify objects.
+- standardized as ISO/IEC 9834-8 and as ITU-T X.667.
+
+# [Labels and Selectors | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
+
+## Yellow
+
+- Labels are key/value pairs that are attached to objects
+- Each Key must be unique for a given object.
+- Labels allow for efficient queries and watches and are ideal for use in UIs and CLIs. Non-identifying information should be recorded using annotations.
+- Example labels: "release" : "stable", "release" : "canary" "environment" : "dev", "environment" : "qa", "environment" : "production" "tier" : "frontend", "tier" : "backend", "tier" : "cache" "partition" : "customerA", "partition" : "customerB" "track" : "daily", "track" : "weekly"
+- Valid label keys have two segments: an optional prefix and name, separated by a slash (/).
+- The name segment is required and must be 63 characters or less
+- The prefix is optional. If specified, the prefix must be a DNS subdomain
+- If the prefix is omitted, the label Key is presumed to be private to the user. Automated system components (e.g. kube-scheduler, kube-controller-manager, kube-apiserver, kubectl, or other third-party automation) which add labels to end-user objects must specify a prefix. The kubernetes.io/ and k8s.io/ prefixes are reserved for Kubernetes core components.
+- we expect many objects to carry the same label(s). Via a label selector, the client/user can identify a set of objects. The label selector is the core grouping primitive in Kubernetes.
+- The API currently supports two types of selectors: equality-based and set-based.
+- Equality- or inequality-based requirements allow filtering by label keys and values.
+- environment = production tier != frontend
+- Set-based label requirements allow filtering keys according to a set of values.
+- environment in (production, qa) tier notin (frontend, backend) partition !partition
+- LIST and WATCH filtering For list and watch operations, you can specify label selectors to filter the sets of objects returned; you specify the filter using a query parameter.
+- equality-based requirements: ?labelSelector=environment%3Dproduction,tier%3Dfrontend set-based requirements: ?labelSelector=environment+in+%28production%2Cqa%29%2Ctier+in+%28frontend%29
+- equality-based one may write: kubectl get pods -l environment=production,tier=frontend or using set-based requirements: kubectl get pods -l 'environment in (production),tier in (frontend)'
+- set-based requirements are more expressive. For instance, they can implement the OR operator on values: kubectl get pods -l 'environment in (production, qa)' or restricting negative matching via notin operator: kubectl get pods -l 'environment,environment notin (frontend)'
+- Some Kubernetes objects, such as services and replicationcontrollers, also use label selectors to specify sets of other resources, such as pods.
+- only equality-based requirement selectors are supported
+- selector: component: redis
+- Newer resources, such as Job, Deployment, ReplicaSet, and DaemonSet, support set-based requirements as well. selector: matchLabels: component: redis matchExpressions: - { key: tier, operator: In, values: [cache] } - { key: environment, operator: NotIn, values: [dev] }
+- matchExpressions is a list of pod selector requirements.
+- Valid operators include In, NotIn, Exists, and DoesNotExist. The values set must be non-empty in the case of In and NotIn.
+- One use case for selecting over labels is to constrain the set of nodes onto which a pod can schedule
+- The labels allow for slicing and dicing the resources along any dimension specified by a label:
+- kubectl get pods -Lapp -Ltier -Lrole
+- Updating labels
+- if you want to label all your NGINX Pods as frontend tier, run: kubectl label pods -l app=nginx tier=fe
+
+# [Namespaces | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/)
+
+## Yellow
+
+- namespaces provide a mechanism for isolating groups of resources within a single cluster. Names of resources need to be unique within a namespace, but not across namespaces. Namespace-based scoping is applicable only for namespaced objects (e.g. Deployments, Services, etc.) and not for cluster-wide objects (e.g. StorageClass, Nodes, PersistentVolumes, etc.).
+- For clusters with a few to tens of users, you should not need to create or think about namespaces at all. Start using namespaces when you need the features they provide.
+- Namespaces provide a scope for names.
+- Namespaces cannot be nested inside one another and each Kubernetes resource can only be in one namespace.
+- Namespaces are a way to divide cluster resources between multiple users (via resource quota).
+- It is not necessary to use multiple namespaces to separate slightly different resources, such as different versions of the same software: use labels to distinguish resources within the same namespace.
+- Kubernetes starts with four initial namespaces: default Kubernetes includes this namespace so that you can start using your new cluster without first creating a namespace. kube-node-lease This namespace holds Lease objects associated with each node. Node leases allow the kubelet to send heartbeats so that the control plane can detect node failure. kube-public This namespace is readable by all clients (including those not authenticated). This namespace is mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public aspect of this namespace is only a convention, not a requirement. kube-system The namespace for objects created by the Kubernetes system.
+- kubectl run nginx --image=nginx --namespace=<insert-namespace-name-here> kubectl get pods --namespace=<insert-namespace-name-here>
+- kubectl config set-context --current --namespace=<insert-namespace-name-here> # Validate it kubectl config view --minify | grep namespace:
+- When you create a Service, it creates a corresponding DNS entry. This entry is of the form <service-name>.<namespace-name>.svc.cluster.local, which means that if a container only uses <service-name>, it will resolve to the service which is local to a namespace.
+- If you want to reach across namespaces, you need to use the fully qualified domain name (FQDN).
+- By creating namespaces with the same name as public top-level domains, Services in these namespaces can have short DNS names that overlap with public DNS records.
+- configure third-party security controls, such as admission webhooks, to block creating any namespace with the name of public TLDs.
+- # In a namespace kubectl api-resources --namespaced=true # Not in a namespace kubectl api-resources --namespaced=false
+
+# [Annotations | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
+
+## Yellow
+
+- You can use Kubernetes annotations to attach arbitrary non-identifying metadata to objects.
+- You can use either labels or annotations to attach metadata to Kubernetes objects. Labels can be used to select objects and to find collections of objects that satisfy certain conditions. In contrast, annotations are not used to identify and select objects.
+- The keys and the values in the map must be strings.
+- Valid annotation keys have two segments: an optional prefix and name
+
+# [Field Selectors | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/field-selectors/)
+
+## Yellow
+
+- Field selectors let you select Kubernetes objects based on the value of one or more resource fields.
+- kubectl get pods --field-selector status.phase=Running
+- Supported field selectors vary by Kubernetes resource type. All resource types support the metadata.name and metadata.namespace fields. Using unsupported field selectors produces an error. For example: kubectl get ingress --field-selector foo.bar=baz Error from server (BadRequest): Unable to find "ingresses" that match label selector "", field selector "foo.bar=baz": "foo.bar" is not a known field selector: only "metadata.name", "metadata.namespace"
+- List of supported fields Kind Fields Pod spec.nodeName spec.restartPolicy spec.schedulerName spec.serviceAccountName spec.hostNetwork status.phase status.podIP status.nominatedNodeName Event involvedObject.kind involvedObject.namespace involvedObject.name involvedObject.uid involvedObject.apiVersion involvedObject.resourceVersion involvedObject.fieldPath reason reportingComponent source type Secret type Namespace status.phase ReplicaSet status.replicas ReplicationController status.replicas Job status.successful Node spec.unschedulable CertificateSigningRequest spec.signerName
+
+# [Finalizers | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/)
+
+## Yellow
+
+- Finalizers are namespaced keys that tell Kubernetes to wait until specific conditions are met before it fully deletes resources marked for deletion. Finalizers alert controllers to clean up resources the deleted object owned. When you tell Kubernetes to delete an object that has finalizers specified for it, the Kubernetes API marks the object for deletion by populating .metadata.deletionTimestamp, and returns a 202 status code (HTTP "Accepted"). The target object remains in a terminating state while the control plane, or other components, take the actions defined by the finalizers. After these actions are complete, the controller removes the relevant finalizers from the target object. When the metadata.finalizers field is empty, Kubernetes considers the deletion complete and deletes the object. You can use finalizers to control garbage collection of resources. For example, you can define a finalizer to clean up related resources or infrastructure before the controller deletes the target resource. You can use finalizers to control garbage collection of objects by alerting controllers to perform specific cleanup tasks before deleting the target resource. Finalizers don't usually specify the code to execute. Instead, they are typically lists of keys on a specific resource similar to annotations. Kubernetes specifies some finalizers automatically, but you can also specify your own.
+- How finalizers work When you create a resource using a manifest file, you can specify finalizers in the metadata.finalizers field. When you attempt to delete the resource, the API server handling the delete request notices the values in the finalizers field and does the following: Modifies the object to add a metadata.deletionTimestamp field with the time you started the deletion. Prevents the object from being removed until all items are removed from its metadata.finalizers field Returns a 202 status code (HTTP "Accepted")
+- When the finalizers field is emptied, an object with a deletionTimestamp field set is automatically deleted.
+- A common example of a finalizer is kubernetes.io/pv-protection, which prevents accidental deletion of PersistentVolume objects. When a PersistentVolume object is in use by a Pod, Kubernetes adds the pv-protection finalizer. If you try to delete the PersistentVolume, it enters a Terminating status, but the controller can't delete it because the finalizer exists. When the Pod stops using the PersistentVolume, Kubernetes clears the pv-protection finalizer, and the controller deletes the volume.
+- when a Job creates one or more Pods, the Job controller applies labels to those pods and tracks changes to any Pods in the cluster with the same label. The Job controller also adds owner references to those Pods, pointing at the Job that created the Pods. If you delete the Job while these Pods are running, Kubernetes uses the owner references (not labels) to determine which Pods in the cluster need cleanup.
+
+# [Owners and Dependents | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/)
+
+## Yellow
+
+- Owner references help different parts of Kubernetes avoid interfering with objects they don’t control.
+- Dependent objects have a metadata.ownerReferences field that references their owner object. A valid owner reference consists of the object name and a UID within the same namespace as the dependent object.
+- Dependent objects also have an ownerReferences.blockOwnerDeletion field that takes a boolean value and controls whether specific dependents can block garbage collection from deleting their owner object.
+- Kubernetes also adds finalizers to an owner resource when you use either foreground or orphan cascading deletion. In foreground deletion, it adds the foreground finalizer so that the controller must delete dependent resources that also have ownerReferences.blockOwnerDeletion=true before it deletes the owner. If you specify an orphan deletion policy, Kubernetes adds the orphan finalizer so that the controller ignores dependent resources after it deletes the owner object.
+
+# [Recommended Labels | Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/)
+
+## Yellow
+
+- In addition to supporting tooling, the recommended labels describe applications in a way that can be queried.
+- The metadata is organized around the concept of an application.
+- The definition of what an application contains is loose.
+- Shared labels and annotations share a common prefix: app.kubernetes.io. Labels without a prefix are private to users.
+- In order to take full advantage of using these labels, they should be applied on every resource object. Key Description Example Type app.kubernetes.io/name The name of the application mysql string app.kubernetes.io/instance A unique name identifying the instance of an application mysql-abcxyz string app.kubernetes.io/version The current version of the application (e.g., a SemVer 1.0, revision hash, etc.) 5.7.21 string app.kubernetes.io/component The component within the architecture database string app.kubernetes.io/part-of The name of a higher level application this one is part of wordpress string app.kubernetes.io/managed-by The tool being used to manage the operation of an application Helm string To illustrate these labels in action, consider the following StatefulSet object: # This is an excerpt apiVersion: apps/v1 kind: StatefulSet metadata: labels: app.kubernetes.io/name: mysql app.kubernetes.io/instance: mysql-abcxyz app.kubernetes.io/version: "5.7.21" app.kubernetes.io/component: database app.kubernetes.io/part-of: wordpress app.kubernetes.io/managed-by: Helm
+
+# [The Kubernetes API | Kubernetes](https://kubernetes.io/docs/concepts/overview/kubernetes-api/)
+
+## Yellow
+
+- The core of Kubernetes' control plane is the API server. The API server exposes an HTTP API that lets end users, different parts of your cluster, and external components communicate with one another.
+- The Kubernetes API lets you query and manipulate the state of API objects in Kubernetes
+- Most operations can be performed through the kubectl command-line interface or other command-line tools, such as kubeadm, which in turn use the API. However, you can also access the API directly using REST calls.
+- The two supported mechanisms are as follows: The Discovery API provides information about the Kubernetes APIs
+- The Kubernetes OpenAPI Document provides (full) OpenAPI v2.0 and 3.0 schemas for all Kubernetes API endpoints.
+- Kubernetes implements an alternative Protobuf based serialization format that is primarily intended for intra-cluster communication.
+- Kubernetes stores the serialized state of objects by writing them into etcd.
+- API resources are distinguished by their API group, resource type, namespace (for namespaced resources), and name.
+- The Kubernetes API can be extended in one of two ways: Custom resources let you declaratively define how the API server should provide your chosen resource API. You can also extend the Kubernetes API by implementing an aggregation layer.
+
+# [Cluster Architecture | Kubernetes](https://kubernetes.io/docs/concepts/architecture/)
+
+## Yellow
+
+- A Kubernetes cluster consists of a control plane plus a set of worker machines, called nodes, that run containerized applications.
+- The worker node(s) host the Pods that are the components of the application workload. The control plane manages the worker nodes and the Pods in the cluster. In production environments, the control plane usually runs across multiple computers and a cluster usually runs multiple nodes, providing fault-tolerance and high availability.
+- The control plane's components make global decisions about the cluster
+- as well as detecting and responding to cluster events (for example, starting up a new pod when a Deployment's replicas field is unsatisfied).
+- Control plane components can be run on any machine in the cluster. However, for simplicity, setup scripts typically start all control plane components on the same machine, and do not run user containers on this machine.
+- kube-apiserver The API server is a component of the Kubernetes control plane that exposes the Kubernetes API. The API server is the front end for the Kubernetes control plane. The main implementation of a Kubernetes API server is kube-apiserver. kube-apiserver is designed to scale horizontally—that is, it scales by deploying more instances. You can run several instances of kube-apiserver and balance traffic between those instances.
+- etcd Consistent and highly-available key value store used as Kubernetes' backing store for all cluster data. If your Kubernetes cluster uses etcd as its backing store, make sure you have a back up plan for the data. You can find in-depth information about etcd in the official https://etcd.io/docs/documentation.
+- kube-scheduler Control plane component that watches for newly created Pods with no assigned node, and selects a node for them to run on. Factors taken into account for scheduling decisions include: individual and collective resource requirements, hardware/software/policy constraints, affinity and anti-affinity specifications, data locality, inter-workload interference, and deadlines.
+- kube-controller-manager Control plane component that runs controller processes. Logically, each controller is a separate process, but to reduce complexity, they are all compiled into a single binary and run in a single process. There are many different types of controllers. Some examples of them are: Node controller: Responsible for noticing and responding when nodes go down. Job controller: Watches for Job objects that represent one-off tasks, then creates Pods to run those tasks to completion. EndpointSlice controller: Populates EndpointSlice objects (to provide a link between Services and Pods). ServiceAccount controller: Create default ServiceAccounts for new namespaces. The above is not an exhaustive list.
+- cloud-controller-manager A Kubernetes control plane component that embeds cloud-specific control logic. The cloud controller manager lets you link your cluster into your cloud provider's API, and separates out the components that interact with that cloud platform from components that only interact with your cluster.
+- The cloud-controller-manager only runs controllers that are specific to your cloud provider. If you are running Kubernetes on your own premises, or in a learning environment inside your own PC, the cluster does not have a cloud controller manager.
+- Node components Node components run on every node, maintaining running pods and providing the Kubernetes runtime environment.
+- kubelet An agent that runs on each node in the cluster. It makes sure that containers are running in a Pod.
+- kube-proxy (optional) kube-proxy is a network proxy that runs on each node in your cluster, implementing part of the Kubernetes Service concept.
+- kube-proxy maintains network rules on nodes.
+- kube-proxy uses the operating system packet filtering layer if there is one and it's available. Otherwise, kube-proxy forwards the traffic itself.
+- Container runtime A fundamental component that empowers Kubernetes to run containers effectively.
+- Kubernetes supports container runtimes such as containerd, CRI-O, and any other implementation of the Kubernetes CRI (Container Runtime Interface).
+- Addons Addons use Kubernetes resources (DaemonSet, Deployment, etc) to implement cluster features. Because these are providing cluster-level features, namespaced resources for addons belong within the kube-system namespace. Selected addons are described below
+- DNS
+- While the other addons are not strictly required, all Kubernetes clusters should have cluster DNS, as many examples rely on it. Cluster DNS is a DNS server, in addition to the other DNS server(s) in your environment, which serves DNS records for Kubernetes services. Containers started by Kubernetes automatically include this DNS server in their DNS searches.
+- Web UI (Dashboard)
+- Container resource monitoring
+- Cluster-level Logging
+- Network plugins
+- Architecture variations
+- Control plane deployment options The control plane components can be deployed in several ways: Traditional deployment Control plane components run directly on dedicated machines or VMs, often managed as systemd services. Static Pods Control plane components are deployed as static Pods, managed by the kubelet on specific nodes. This is a common approach used by tools like kubeadm. Self-hosted The control plane runs as Pods within the Kubernetes cluster itself, managed by Deployments and StatefulSets or other Kubernetes primitives. Managed Kubernetes services Cloud providers often abstract away the control plane, managing its components as part of their service offering.
+- Customization and extensibility Kubernetes architecture allows for significant customization: Custom schedulers can be deployed to work alongside the default Kubernetes scheduler or to replace it entirely. API servers can be extended with CustomResourceDefinitions and API Aggregation. Cloud providers can integrate deeply with Kubernetes using the cloud-controller-manager. The flexibility of Kubernetes architecture allows organizations to tailor their clusters to specific needs, balancing factors such as operational complexity, performance, and management overhead.
+
+# [Nodes | Kubernetes](https://kubernetes.io/docs/concepts/architecture/nodes/)
+
+## Yellow
+
+- Kubernetes runs your workload by placing containers into Pods to run on Nodes. A node may be a virtual or physical machine, depending on the cluster. Each node is managed by the control plane and contains the services necessary to run Pods.
+- The components on a node include the kubelet, a container runtime, and the kube-proxy.
+- There are two main ways to have Nodes added to the API server: The kubelet on a node self-registers to the control plane You (or another human user) manually add a Node object
+- Kubernetes creates a Node object internally (the representation). Kubernetes checks that a kubelet has registered to the API server that matches the metadata.name field of the Node.
+- If the node is healthy
+- then it is eligible to run a Pod.
+- The name of a Node object must be a valid DNS subdomain name.
+- Two Nodes cannot have the same name at the same time. Kubernetes also assumes that a resource with the same name is the same object.
+- Self-registration of Nodes When the kubelet flag --register-node is true (the default), the kubelet will attempt to register itself with the API server. This is the preferred pattern, used by most distros. For self-registration, the kubelet is started with the following options: --kubeconfig - Path to credentials to authenticate itself to the API server. --cloud-provider - How to talk to a cloud provider to read metadata about itself. --register-node - Automatically register with the API server. --register-with-taints - Register the node with the given list of taints (comma separated <key>=<value>:<effect>). No-op if register-node is false. --node-ip - Optional comma-separated list of the IP addresses for the node.
+- you set this value to be the IPv4 address that the kubelet should use for the node.
+- --node-labels - Labels to add when registering the node in the cluster
+- --node-status-update-frequency - Specifies how often kubelet posts its node status to the API server.
+- when Node configuration needs to be updated, it is a good practice to re-register the node with the API server. For example, if the kubelet is being restarted with a new set of --node-labels, but the same Node name is used, the change will not take effect, as labels are only set (or modified) upon Node registration with the API server.
+- Node re-registration ensures all Pods will be drained and properly re-scheduled.
+- Manual Node administration You can create and modify Node objects using kubectl. When you want to create Node objects manually, set the kubelet flag --register-node=false. You can modify Node objects regardless of the setting of --register-node. For example, you can set labels on an existing Node or mark it unschedulable. You can use labels on Nodes in conjunction with node selectors on Pods to control scheduling. For example, you can constrain a Pod to only be eligible to run on a subset of the available nodes. Marking a node as unschedulable prevents the scheduler from placing new pods onto that Node but does not affect existing Pods on the Node. This is useful as a preparatory step before a node reboot or other maintenance. To mark a Node unschedulable, run: kubectl cordon $NODENAME See (https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/)Safely Drain a Node for more details.
+- Note: Pods that are part of a DaemonSet tolerate being run on an unschedulable Node.
+- For nodes there are two forms of heartbeats: Updates to the .status of a Node. Lease objects within the kube-node-lease namespace. Each Node has an associated Lease object.
+- Node controller
+- The node controller has multiple roles in a node's life. The first is assigning a CIDR block to the node when it is registered (if CIDR assignment is turned on).
+- The second is keeping the node controller's internal list of nodes up to date with the cloud provider's list of available machines.
+- the node controller asks the cloud provider if the VM for that node is still available. If not, the node controller deletes the node from its list of nodes.
+- The third is monitoring the nodes' health.
+- By default, the node controller waits 5 minutes between marking the node as Unknown and submitting the first eviction request.
+- By default, the node controller checks the state of each node every 5 seconds. This period can be configured using the --node-monitor-period flag on the kube-controller-manager component.
+- In most cases, the node controller limits the eviction rate to --node-eviction-rate (default 0.1) per second, meaning it won't evict pods from more than 1 node per 10 seconds.
+- The node eviction behavior changes when a node in a given availability zone becomes unhealthy.
+- If the fraction of unhealthy nodes is at least --unhealthy-zone-threshold (default 0.55), then the eviction rate is reduced. If the cluster is small (i.e. has less than or equal to --large-cluster-size-threshold nodes - default 50), then evictions are stopped. Otherwise, the eviction rate is reduced to --secondary-node-eviction-rate (default 0.01) per second.
+- The corner case is when all zones are completely unhealthy
+- the node controller assumes that there is some problem with connectivity between the control plane and the nodes, and doesn't perform any evictions.
+- The node controller also adds taints corresponding to node problems like node unreachable or not ready. This means that the scheduler won't place Pods onto unhealthy nodes.
+- Resource capacity tracking Node objects track information about the Node's resource capacity: for example, the amount of memory available and the number of CPUs. Nodes that self register report their capacity during registration. If you manually add a Node, then you need to set the node's capacity information when you add it.
+- Swap memory management
+- To enable swap on a node, the NodeSwap feature gate must be enabled on the kubelet (default is true), and the --fail-swap-on command line flag or failSwapOn configuration setting must be set to false. To allow Pods to utilize swap, swapBehavior should not be set to NoSwap (which is the default behavior) in the kubelet config.
+- When the memory swap feature is turned on, Kubernetes data such as the content of Secret objects that were written to tmpfs now could be swapped to disk.
+
+---
+
+Created with Super Simple Highlighter. ©2010-24 [Dexterous Logic software](https://www.dexterouslogic.com/)

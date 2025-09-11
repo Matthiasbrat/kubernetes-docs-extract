@@ -1,0 +1,9 @@
+# [Getting started | Kubernetes](https://kubernetes.io/docs/setup/)
+
+## Yellow
+
+- Several Kubernetes components such as kube-apiserver or kube-proxy can also be deployed as container images within the cluster.
+
+---
+
+Created with Super Simple Highlighter. ©2010-24 [Dexterous Logic software](https://www.dexterouslogic.com/)
