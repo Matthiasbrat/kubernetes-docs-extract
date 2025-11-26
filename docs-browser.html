@@ -459,19 +459,48 @@
         }
 
         .paragraph {
-            padding: 0.5rem 0;
-            margin-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.5rem;
         }
 
         .paragraph:last-child {
             margin-bottom: 0;
-            border-bottom: none;
         }
 
         .paragraph-text {
             color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 1.05rem;
+            line-height: 1.85;
+        }
+
+        /* Drop cap for first paragraph */
+        .paragraph:first-child .paragraph-text::first-letter {
+            float: left;
+            font-size: 3.5rem;
+            line-height: 1;
+            padding-right: 0.5rem;
+            padding-top: 0.1rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Section indicator between paragraphs */
+        .paragraph + .paragraph::before {
+            content: '';
+            display: block;
+            width: 3rem;
+            height: 1px;
+            background: var(--border);
+            margin: 0 auto 1.5rem;
+        }
+
+        /* Topic content - book-like reading */
+        .topic-content {
+            display: none;
+            padding: 2rem 2.5rem;
+            max-width: 68ch;
+            margin: 0 auto;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
         }
 
         .paragraph-text h2, .paragraph-text h3 {
