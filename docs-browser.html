@@ -1725,10 +1725,10 @@
                                 <article class="note-card" id="note-${note.originalIndex}">
                                     <div class="note-header" onclick="toggleNoteCard(this)">
                                         <div>
-                                            <h3 class="note-title">${escapeHtml(note.title)}</h3>
+                                            <h3 class="note-title">${highlightText(escapeHtml(note.title), highlightQuery)}</h3>
                                             <div class="note-meta">
-                                                <span class="note-category">${escapeHtml(note.category)}</span>
-                                                ${note.tags ? note.tags.map(tag => `<span class="note-tag">${escapeHtml(tag)}</span>`).join('') : ''}
+                                                <span class="note-category">${highlightText(escapeHtml(note.category), highlightQuery)}</span>
+                                                ${note.tags ? note.tags.map(tag => `<span class="note-tag">${highlightText(escapeHtml(tag), highlightQuery)}</span>`).join('') : ''}
                                             </div>
                                         </div>
                                         <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1736,7 +1736,7 @@
                                         </svg>
                                     </div>
                                     <div class="note-content">
-                                        <div class="note-body">${parseMarkdown(note.content)}</div>
+                                        <div class="note-body">${highlightText(parseMarkdown(note.content), highlightQuery)}</div>
                                         ${note.links && note.links.length > 0 ? `
                                             <div class="note-links">
                                                 <div class="note-links-title">Related Links</div>
@@ -1747,7 +1747,7 @@
                                                             <polyline points="15 3 21 3 21 9"></polyline>
                                                             <line x1="10" y1="14" x2="21" y2="3"></line>
                                                         </svg>
-                                                        ${escapeHtml(link.title)}
+                                                        ${highlightText(escapeHtml(link.title), highlightQuery)}
                                                     </a>
                                                 `).join('')}
                                             </div>
@@ -1761,6 +1761,21 @@
             });
 
             notesContent.innerHTML = contentHTML;
+        }
+
+        // Highlight search terms in text (without breaking HTML tags)
+        function highlightText(text, query) {
+            if (!query) return text;
+            
+            // Split by HTML tags to avoid highlighting inside tags
+            const parts = text.split(/(<[^>]+>)/);
+            return parts.map(part => {
+                // Don't highlight inside HTML tags
+                if (part.startsWith('<')) return part;
+                // Highlight in text content
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                return part.replace(regex, '<mark>$1</mark>');
+            }).join('');
         }
 
         function escapeHtml(text) {
