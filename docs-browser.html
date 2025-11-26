@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Browser</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;500;600&family=Poppins:wght@400;500;600&family=Inter:wght@400;500;600&family=Raleway:wght@400;500;600&family=Nunito:wght@400;600;700&family=Quicksand:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0b;
+            --bg-secondary: #121214;
+            --bg-card: #18181b;
+            --bg-hover: #1f1f23;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent: #22d3ee;
+            --accent-dim: #0891b2;
+            --border: #27272a;
+            --border-light: #3f3f46;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --code-bg: #0d1117;
+            --code-header: #161b22;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f4f4f5;
+            --bg-card: #ffffff;
+            --bg-hover: #e4e4e7;
+            --text-primary: #18181b;
+            --text-secondary: #3f3f46;
+            --text-muted: #71717a;
+            --accent: #0891b2;
+            --accent-dim: #06b6d4;
+            --border: #e4e4e7;
+            --border-light: #d4d4d8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --code-bg: #1e293b;
+            --code-header: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-family: 'Inter', sans-serif;
+            font-size: 2rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .title-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .font-select {
+            font-family: inherit;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .font-select:hover {
+            border-color: var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .font-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 0.6rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            color: var(--accent);
+            border-color: var(--border-light);
+        }
+
+        .theme-toggle .icon-sun {
+            display: none;
+        }
+
+        .theme-toggle .icon-moon {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .icon-sun {
+            display: block;
+        }
+
+        [data-theme="light"] .theme-toggle .icon-moon {
+            display: none;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Search & Controls */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        input[type="text"], input[type="file"] {
+            font-family: 'Inter', sans-serif;
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        .file-upload {
+            position: relative;
+        }
+
+        .file-upload input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-upload-btn {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            background: var(--accent-dim);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .file-upload:hover .file-upload-btn {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* Content Grid */
+        .content {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                position: static !important;
+            }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 2px;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 2px;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.6rem 0.75rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            background: var(--bg-card);
+            color: var(--accent);
+            border-left-color: var(--accent);
+        }
+
+        /* Main Content */
+        main {
+            min-width: 0;
+        }
+
+        .topic-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .topic-card:hover {
+            border-color: var(--border-light);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .topic-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .topic-header:hover {
+            background: var(--bg-hover);
+        }
+
+        .topic-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .topic-url {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-dim);
+            word-break: break-all;
+        }
+
+        .topic-url a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+
+        .topic-url a:hover {
+            color: var(--accent);
+        }
+
+        .toggle-icon {
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .topic-card.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .topic-content {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        .topic-card.expanded .topic-content {
+            display: block;
+        }
+
+        .paragraph {
+            padding: 0.5rem 0;
+            margin-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .paragraph:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .paragraph-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .paragraph-text h2, .paragraph-text h3 {
+            font-family: 'Sora', sans-serif;
+            color: var(--text-primary);
+            margin: 1rem 0 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .paragraph-text ul, .paragraph-text ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .paragraph-text li {
+            margin-bottom: 0.4rem;
+        }
+
+        .paragraph-ref {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed var(--border);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-desc {
+            font-size: 0.95rem;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.75rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Highlight */
+        mark {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--accent);
+            padding: 0.1em 0.2em;
+            border-radius: 3px;
+        }
+
+        /* Results count */
+        .results-info {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* Topic Groups */
+        .topic-group {
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .group-header:hover {
+            background: var(--bg-hover);
+        }
+
+        .group-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .group-toggle-icon {
+            color: var(--accent);
+            transition: transform 0.2s ease;
+        }
+
+        .topic-group.expanded .group-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .group-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-transform: capitalize;
+        }
+
+        .group-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-primary);
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+        }
+
+        .group-content {
+            display: none;
+            padding: 1rem;
+        }
+
+        .topic-group.expanded .group-content {
+            display: block;
+        }
+
+        .group-content .topic-card {
+            margin-bottom: 1rem;
+            border-radius: 12px;
+        }
+
+        .group-content .topic-card:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Nav Group Styles */
+        .nav-group-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.15s ease;
+        }
+
+        .nav-group-header:hover {
+            background: var(--bg-hover);
+        }
+
+        .nav-group-icon {
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-group-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .nav-group-header .nav-title {
+            flex: 1;
+            margin-bottom: 0;
+            padding-left: 0;
+        }
+
+        .nav-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+        }
+
+        .nav-list.collapsed {
+            display: none;
+        }
+
+        .nav-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-section .nav-list {
+            margin-left: 1.25rem;
+            margin-top: 0.25rem;
+            border-left: 1px solid var(--border);
+            padding-left: 0.5rem;
+        }
+
+        /* Code Block Styles */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: var(--code-header);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-lang {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+
+        .copy-btn.copied {
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+            white-space: pre;
+            tab-size: 2;
+            -moz-tab-size: 2;
+            color: #e6edf3;
+        }
+
+        .code-content::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .code-content::-webkit-scrollbar-track {
+            background: var(--code-bg);
+        }
+
+        .code-content::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
+        }
+
+        /* YAML Syntax Highlighting */
+        .yaml-key {
+            color: #7ee787;
+        }
+
+        .yaml-string {
+            color: #a5d6ff;
+        }
+
+        .yaml-number {
+            color: #79c0ff;
+        }
+
+        .yaml-boolean {
+            color: #ff7b72;
+        }
+
+        .yaml-null {
+            color: #ff7b72;
+            font-style: italic;
+        }
+
+        .yaml-comment {
+            color: #8b949e;
+            font-style: italic;
+        }
+
+        .yaml-punctuation {
+            color: #8b949e;
+        }
+
+        .yaml-list-marker {
+            color: #ffa657;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.75rem 1.25rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-secondary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Notes Styles */
+        .note-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .note-card:hover {
+            border-color: var(--border-light);
+        }
+
+        .note-header {
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .note-header:hover {
+            background: var(--bg-hover);
+        }
+
+        .note-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.4rem;
+        }
+
+        .note-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .note-category {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            background: rgba(34, 211, 238, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .note-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        .note-content {
+            display: none;
+            padding: 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .note-card.expanded .note-content {
+            display: block;
+        }
+
+        .note-body {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .note-body h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 1.25rem 0 0.5rem;
+        }
+
+        .note-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .note-body h4 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 1rem 0 0.4rem;
+        }
+
+        .note-body p {
+            margin-bottom: 0.75rem;
+        }
+
+        .note-body ul, .note-body ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .note-body li {
+            margin-bottom: 0.3rem;
+        }
+
+        .note-body blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .note-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+
+        .note-body th, .note-body td {
+            border: 1px solid var(--border);
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+        }
+
+        .note-body th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .note-body hr {
+            border: none;
+            border-top: 1px dashed var(--border);
+            margin: 1.5rem 0;
+        }
+
+        .note-links {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .note-links-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .note-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.8rem;
+            color: var(--accent-dim);
+            text-decoration: none;
+            margin-right: 1rem;
+            margin-bottom: 0.4rem;
+            transition: color 0.15s ease;
+        }
+
+        .note-link:hover {
+            color: var(--accent);
+        }
+
+        /* Note images */
+        .note-image {
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .note-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme="light"] .note-image img {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* File upload for notes */
+        .upload-section {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-section .file-upload {
+            flex: 1;
+        }
+
+        /* Demo data notice */
+        .demo-notice {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(34, 211, 238, 0.05));
+            border: 1px solid var(--accent-dim);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .demo-notice-icon {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .demo-notice-text {
+            font-family: 'Sora', sans-serif;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .demo-notice-text strong {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div class="title-row">
+                    <h1>Documentation Browser</h1>
+                    <div class="header-controls">
+                        <select class="font-select" id="font-select" onchange="changeFont(this.value)" title="Choose font">
+                            <option value="arial">Arial</option>
+                            <option value="helvetica">Helvetica</option>
+                            <option value="verdana">Verdana</option>
+                            <option value="tahoma">Tahoma</option>
+                            <option value="times">Times New Roman</option>
+                            <option value="georgia">Georgia</option>
+                            <option value="comic-sans">Comic Sans</option>
+                            <option value="roboto">Roboto</option>
+                            <option value="open-sans">Open Sans</option>
+                            <option value="lato">Lato</option>
+                            <option value="montserrat">Montserrat</option>
+                            <option value="poppins">Poppins</option>
+                            <option value="inter">Inter</option>
+                            <option value="raleway">Raleway</option>
+                            <option value="nunito">Nunito</option>
+                            <option value="quicksand">Quicksand</option>
+                        </select>
+                        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                    </div>
+                </div>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-value" id="group-count">0</span>
+                        <span class="stat-label">Groups</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="topic-count">0</span>
+                        <span class="stat-label">Topics</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="paragraph-count">0</span>
+                        <span class="stat-label">Paragraphs</span>
+                    </div>
+                </div>
+            </div>
+            <div class="controls">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                    <input type="text" id="search" placeholder="Search topics and content...">
+                </div>
+                <div class="file-upload">
+                    <input type="file" id="file-input" accept=".json">
+                    <div class="file-upload-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Load Docs
+                    </div>
+                </div>
+                <div class="file-upload">
+                    <input type="file" id="notes-file-input" accept=".json">
+                    <div class="file-upload-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        Load Notes
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('docs')">Documentation</button>
+            <button class="tab-btn" onclick="switchTab('notes')">Notes</button>
+        </div>
+
+        <div id="docs-tab" class="tab-content active">
+            <div class="content">
+                <aside class="sidebar">
+                    <nav id="nav-container">
+                        <div class="nav-section">
+                            <div class="nav-title">Topics</div>
+                            <ul class="nav-list" id="nav-list">
+                                <!-- Generated dynamically -->
+                            </ul>
+                        </div>
+                    </nav>
+                </aside>
+
+                <main id="main-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">📄</div>
+                        <div class="empty-title">Load your JSON file</div>
+                        <div class="empty-desc">Click "Load Docs" to browse your documentation</div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <div id="notes-tab" class="tab-content">
+            <div class="content">
+                <aside class="sidebar">
+                    <nav id="notes-nav-container">
+                        <div class="nav-section">
+                            <div class="nav-title">Categories</div>
+                            <ul class="nav-list" id="notes-nav-list">
+                                <!-- Generated dynamically -->
+                            </ul>
+                        </div>
+                    </nav>
+                </aside>
+
+                <main id="notes-content">
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <div class="empty-title">Load your notes</div>
+                        <div class="empty-desc">Click "Load Notes" to browse your personal notes</div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let filteredData = [];
+        let groupedData = {};
+        let collapsedGroups = new Set();
+
+        // DOM Elements
+        const searchInput = document.getElementById('search');
+        const fileInput = document.getElementById('file-input');
+        const mainContent = document.getElementById('main-content');
+        const navList = document.getElementById('nav-list');
+        const topicCount = document.getElementById('topic-count');
+        const paragraphCount = document.getElementById('paragraph-count');
+
+        // Notes state
+        let notesData = [];
+        let filteredNotes = [];
+        let notesGrouped = {};
+        const notesFileInput = document.getElementById('notes-file-input');
+        const notesContent = document.getElementById('notes-content');
+        const notesNavContainer = document.getElementById('notes-nav-container');
+
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            
+            // Update search placeholder
+            const searchInput = document.getElementById('search');
+            if (tab === 'notes') {
+                searchInput.placeholder = 'Search notes...';
+            } else {
+                searchInput.placeholder = 'Search topics and content...';
+            }
+        }
+
+        // Extract category from URL path
+        function extractCategory(url) {
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/').filter(p => p && p !== 'docs');
+                
+                // Get first 1-2 meaningful path segments
+                if (pathParts.length >= 2) {
+                    return pathParts.slice(0, 2).join(' / ').replace(/-/g, ' ');
+                } else if (pathParts.length === 1) {
+                    return pathParts[0].replace(/-/g, ' ');
+                }
+                return 'General';
+            } catch {
+                return 'General';
+            }
+        }
+
+        // Group topics by category
+        function groupTopics(topics) {
+            const groups = {};
+            topics.forEach((topic, originalIndex) => {
+                const category = extractCategory(topic.url);
+                const capitalizedCategory = category
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+                
+                if (!groups[capitalizedCategory]) {
+                    groups[capitalizedCategory] = [];
+                }
+                groups[capitalizedCategory].push({ ...topic, originalIndex });
+            });
+            
+            // Sort groups alphabetically
+            const sortedGroups = {};
+            Object.keys(groups).sort().forEach(key => {
+                sortedGroups[key] = groups[key];
+            });
+            
+            return sortedGroups;
+        }
+
+        // File upload handler
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    data = JSON.parse(event.target.result);
+                    filteredData = data;
+                    groupedData = groupTopics(data);
+                    updateStats();
+                    renderNav();
+                    renderContent();
+                } catch (err) {
+                    alert('Error parsing JSON file. Please check the format.');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Notes file upload handler
+        notesFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    notesData = JSON.parse(event.target.result);
+                    filteredNotes = notesData;
+                    notesGrouped = groupNotes(notesData);
+                    renderNotesNav();
+                    renderNotes();
+                    switchTab('notes');
+                } catch (err) {
+                    alert('Error parsing notes JSON file. Please check the format.');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Group notes by category
+        function groupNotes(notes) {
+            const groups = {};
+            notes.forEach((note, index) => {
+                const category = note.category || 'Uncategorized';
+                if (!groups[category]) {
+                    groups[category] = [];
+                }
+                groups[category].push({ ...note, originalIndex: index });
+            });
+            return groups;
+        }
+
+        // Search handler with debounce
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = e.target.value.toLowerCase().trim();
+                const activeTab = document.querySelector('.tab-btn.active').textContent.toLowerCase();
+                
+                if (activeTab === 'notes') {
+                    filterNotes(query);
+                } else {
+                    filterData(query);
+                }
+            }, 200);
+        });
+
+        function filterNotes(query) {
+            if (!query) {
+                filteredNotes = notesData;
+            } else {
+                filteredNotes = notesData.filter(note => {
+                    const titleMatch = note.title.toLowerCase().includes(query);
+                    const contentMatch = note.content.toLowerCase().includes(query);
+                    const tagMatch = note.tags && note.tags.some(t => t.toLowerCase().includes(query));
+                    const categoryMatch = note.category && note.category.toLowerCase().includes(query);
+                    return titleMatch || contentMatch || tagMatch || categoryMatch;
+                });
+            }
+            notesGrouped = groupNotes(filteredNotes);
+            renderNotesNav();
+            renderNotes(query);
+        }
+
+        function filterData(query) {
+            if (!query) {
+                filteredData = data;
+            } else {
+                filteredData = data.filter(topic => {
+                    const titleMatch = topic.title.toLowerCase().includes(query);
+                    const contentMatch = topic.paragraphs.some(p => 
+                        p.paragraph.toLowerCase().includes(query)
+                    );
+                    return titleMatch || contentMatch;
+                });
+            }
+            groupedData = groupTopics(filteredData);
+            renderNav();
+            renderContent(query);
+        }
+
+        function updateStats() {
+            topicCount.textContent = data.length;
+            const totalParagraphs = data.reduce((sum, topic) => 
+                sum + topic.paragraphs.length, 0
+            );
+            paragraphCount.textContent = totalParagraphs;
+            document.getElementById('group-count').textContent = Object.keys(groupedData).length;
+        }
+
+        function renderNav() {
+            const navContainer = document.getElementById('nav-container');
+            
+            let navHTML = '';
+            Object.entries(groupedData).forEach(([category, topics]) => {
+                const isCollapsed = collapsedGroups.has(category);
+                navHTML += `
+                    <div class="nav-section">
+                        <div class="nav-group-header" onclick="toggleNavGroup('${escapeHtml(category)}')">
+                            <svg class="nav-group-icon ${isCollapsed ? '' : 'expanded'}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                            <span class="nav-title">${escapeHtml(category)}</span>
+                            <span class="nav-count">${topics.length}</span>
+                        </div>
+                        <ul class="nav-list ${isCollapsed ? 'collapsed' : ''}" data-category="${escapeHtml(category)}">
+                            ${topics.map(topic => `
+                                <li class="nav-item">
+                                    <a href="#topic-${topic.originalIndex}" class="nav-link" data-index="${topic.originalIndex}">
+                                        ${escapeHtml(truncate(topic.title, 28))}
+                                    </a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            });
+            
+            navContainer.innerHTML = navHTML;
+
+            // Add click handlers for nav links
+            navContainer.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const index = parseInt(link.dataset.index);
+                    const card = document.getElementById(`topic-${index}`);
+                    if (card) {
+                        // Expand the group first
+                        const groupEl = card.closest('.topic-group');
+                        if (groupEl) groupEl.classList.add('expanded');
+                        
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        card.classList.add('expanded');
+                        
+                        navContainer.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                        link.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        function toggleNavGroup(category) {
+            if (collapsedGroups.has(category)) {
+                collapsedGroups.delete(category);
+            } else {
+                collapsedGroups.add(category);
+            }
+            renderNav();
+        }
+
+        function renderContent(highlightQuery = '') {
+            if (Object.keys(groupedData).length === 0) {
+                mainContent.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-title">No results found</div>
+                        <div class="empty-desc">Try a different search term</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const resultsInfo = highlightQuery 
+                ? `<div class="results-info">Found ${filteredData.length} topic${filteredData.length !== 1 ? 's' : ''} in ${Object.keys(groupedData).length} group${Object.keys(groupedData).length !== 1 ? 's' : ''} matching "${escapeHtml(highlightQuery)}"</div>`
+                : '';
+
+            let contentHTML = resultsInfo;
+            
+            Object.entries(groupedData).forEach(([category, topics]) => {
+                contentHTML += `
+                    <section class="topic-group expanded" data-category="${escapeHtml(category)}">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <div class="group-header-left">
+                                <svg class="group-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <h2 class="group-title">${escapeHtml(category)}</h2>
+                            </div>
+                            <span class="group-count">${topics.length} topic${topics.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="group-content">
+                            ${topics.map(topic => `
+                                <article class="topic-card" id="topic-${topic.originalIndex}">
+                                    <div class="topic-header" onclick="toggleCard(this)">
+                                        <div>
+                                            <h3 class="topic-title">${highlight(topic.title, highlightQuery)}</h3>
+                                            <div class="topic-url">
+                                                <a href="${escapeHtml(topic.url)}" target="_blank" rel="noopener">${escapeHtml(topic.url)}</a>
+                                            </div>
+                                        </div>
+                                        <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="topic-content">
+                                        ${topic.paragraphs.map(p => `
+                                            <div class="paragraph">
+                                                <div class="paragraph-text">${highlight(p.paragraph, highlightQuery)}</div>
+                                                ${p.reference ? `<div class="paragraph-ref">Ref: ${escapeHtml(p.reference)}</div>` : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </section>
+                `;
+            });
+
+            mainContent.innerHTML = contentHTML;
+        }
+
+        function toggleGroup(header) {
+            const group = header.closest('.topic-group');
+            group.classList.toggle('expanded');
+        }
+
+        function toggleCard(header) {
+            const card = header.closest('.topic-card');
+            card.classList.toggle('expanded');
+        }
+
+        function toggleNoteCard(header) {
+            const card = header.closest('.note-card');
+            card.classList.toggle('expanded');
+        }
+
+        // Render notes navigation
+        function renderNotesNav() {
+            let navHTML = '';
+            Object.entries(notesGrouped).forEach(([category, notes]) => {
+                navHTML += `
+                    <div class="nav-section">
+                        <div class="nav-group-header" onclick="toggleNotesNavGroup(this)">
+                            <svg class="nav-group-icon expanded" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                            <span class="nav-title">${escapeHtml(category)}</span>
+                            <span class="nav-count">${notes.length}</span>
+                        </div>
+                        <ul class="nav-list" data-category="${escapeHtml(category)}">
+                            ${notes.map(note => `
+                                <li class="nav-item">
+                                    <a href="#note-${note.originalIndex}" class="nav-link" data-index="${note.originalIndex}" onclick="scrollToNote(${note.originalIndex}); return false;">
+                                        ${escapeHtml(truncate(note.title, 28))}
+                                    </a>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            });
+            
+            notesNavContainer.innerHTML = navHTML;
+        }
+
+        function toggleNotesNavGroup(header) {
+            const icon = header.querySelector('.nav-group-icon');
+            const list = header.nextElementSibling;
+            icon.classList.toggle('expanded');
+            list.classList.toggle('collapsed');
+        }
+
+        function scrollToNote(index) {
+            const card = document.getElementById(`note-${index}`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.classList.add('expanded');
+            }
+        }
+
+        // Simple markdown parser for notes
+        function parseMarkdown(text) {
+            // First, handle tables before any newline processing
+            // Match entire table blocks (consecutive lines starting and ending with |)
+            text = text.replace(/((?:^\|.+\|$\n?)+)/gm, (tableBlock) => {
+                const rows = tableBlock.trim().split('\n');
+                let tableHtml = '<table>';
+                let isHeader = true;
+                
+                rows.forEach((row, index) => {
+                    // Skip separator rows (|---|---|)
+                    if (row.match(/^\|[\s\-:|]+\|$/)) {
+                        isHeader = false;
+                        return;
+                    }
+                    
+                    // Extract cells
+                    const cells = row.slice(1, -1).split('|').map(c => c.trim());
+                    const cellTag = isHeader && index === 0 ? 'th' : 'td';
+                    tableHtml += '<tr>' + cells.map(c => `<${cellTag}>${c}</${cellTag}>`).join('') + '</tr>';
+                });
+                
+                tableHtml += '</table>';
+                return tableHtml;
+            });
+
+            let html = text
+                // Escape HTML first (but not our table tags)
+                .replace(/&(?!amp;|lt;|gt;)/g, '&amp;')
+                .replace(/<(?!\/?t(?:able|r|d|h)>)/g, '&lt;')
+                .replace(/(?<!(?:table|tr|td|th))>/g, '&gt;')
+                // Code blocks (triple backticks)
+                .replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                    const isYaml = lang === 'yaml' || lang === 'yml';
+                    const isBash = lang === 'bash' || lang === 'sh';
+                    const isIni = lang === 'ini';
+                    const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+                    let highlighted = code.trim();
+                    
+                    if (isYaml) {
+                        highlighted = highlightYaml(code.trim());
+                    }
+                    
+                    return `<div class="code-block"><div class="code-header"><span class="code-lang">${lang || 'code'}</span><button class="copy-btn" onclick="copyCode('${codeId}', this)">Copy</button></div><div class="code-content" id="${codeId}">${highlighted}</div></div>`;
+                })
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code style="background: var(--bg-secondary); padding: 0.1em 0.3em; border-radius: 3px; font-family: JetBrains Mono, monospace; font-size: 0.85em;">$1</code>')
+                // Headers
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+                // Bold
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // Italic
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                // Blockquotes
+                .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+                // Unordered lists
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                // Ordered lists
+                .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+                // Horizontal rules
+                .replace(/^---$/gm, '<hr>')
+                // Custom image tags <image src="..."></image>
+                .replace(/&lt;image\s+src=["']([^"']+)["']\s*&gt;&lt;\/image&gt;/g, '<div class="note-image"><img src="$1" alt="Image" loading="lazy"></div>')
+                // Markdown images ![alt](url)
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<div class="note-image"><img src="$2" alt="$1" loading="lazy"></div>')
+                // Wrap consecutive li elements in ul
+                .replace(/(<li>[\s\S]*?<\/li>)(\s*<li>)/g, '$1$2')
+                // Links
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color: var(--accent);">$1</a>')
+                // Paragraphs (double newlines)
+                .replace(/\n\n/g, '</p><p>')
+                // Single newlines in regular text (not in code blocks)
+                .replace(/\n/g, '<br>');
+            
+            // Wrap in paragraph if not starting with a block element
+            if (!html.startsWith('<h') && !html.startsWith('<div') && !html.startsWith('<ul') && !html.startsWith('<blockquote') && !html.startsWith('<table')) {
+                html = '<p>' + html + '</p>';
+            }
+            
+            // Wrap consecutive li elements
+            html = html.replace(/(<li>[\s\S]*?<\/li>)+/g, '<ul>$&</ul>');
+            
+            return html;
+        }
+
+        // Render notes
+        function renderNotes(highlightQuery = '') {
+            if (Object.keys(notesGrouped).length === 0) {
+                notesContent.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-title">No notes found</div>
+                        <div class="empty-desc">Try a different search term</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const resultsInfo = highlightQuery 
+                ? `<div class="results-info">Found ${filteredNotes.length} note${filteredNotes.length !== 1 ? 's' : ''} matching "${escapeHtml(highlightQuery)}"</div>`
+                : '';
+
+            let contentHTML = resultsInfo;
+            
+            Object.entries(notesGrouped).forEach(([category, notes]) => {
+                contentHTML += `
+                    <section class="topic-group expanded" data-category="${escapeHtml(category)}">
+                        <div class="group-header" onclick="toggleGroup(this)">
+                            <div class="group-header-left">
+                                <svg class="group-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <h2 class="group-title">${escapeHtml(category)}</h2>
+                            </div>
+                            <span class="group-count">${notes.length} note${notes.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="group-content">
+                            ${notes.map(note => `
+                                <article class="note-card" id="note-${note.originalIndex}">
+                                    <div class="note-header" onclick="toggleNoteCard(this)">
+                                        <div>
+                                            <h3 class="note-title">${escapeHtml(note.title)}</h3>
+                                            <div class="note-meta">
+                                                <span class="note-category">${escapeHtml(note.category)}</span>
+                                                ${note.tags ? note.tags.map(tag => `<span class="note-tag">${escapeHtml(tag)}</span>`).join('') : ''}
+                                            </div>
+                                        </div>
+                                        <svg class="toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </div>
+                                    <div class="note-content">
+                                        <div class="note-body">${parseMarkdown(note.content)}</div>
+                                        ${note.links && note.links.length > 0 ? `
+                                            <div class="note-links">
+                                                <div class="note-links-title">Related Links</div>
+                                                ${note.links.map(link => `
+                                                    <a href="${escapeHtml(link.url)}" class="note-link" target="_blank" rel="noopener">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                                            <polyline points="15 3 21 3 21 9"></polyline>
+                                                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                                                        </svg>
+                                                        ${escapeHtml(link.title)}
+                                                    </a>
+                                                `).join('')}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </section>
+                `;
+            });
+
+            notesContent.innerHTML = contentHTML;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // YAML Syntax Highlighter
+        function highlightYaml(code) {
+            // First escape HTML
+            let escaped = escapeHtml(code);
+            
+            // Split into lines for processing
+            const lines = escaped.split('\n');
+            const highlightedLines = lines.map(line => {
+                // Comments
+                if (line.trim().startsWith('#')) {
+                    return `<span class="yaml-comment">${line}</span>`;
+                }
+                
+                // Lines with key: value
+                const keyValueMatch = line.match(/^(\s*)([a-zA-Z0-9_\-\.\/]+)(\s*:\s*)(.*)$/);
+                if (keyValueMatch) {
+                    const [, indent, key, colon, value] = keyValueMatch;
+                    let highlightedValue = highlightYamlValue(value);
+                    return `${indent}<span class="yaml-key">${key}</span><span class="yaml-punctuation">${colon}</span>${highlightedValue}`;
+                }
+                
+                // List items
+                const listMatch = line.match(/^(\s*)(-)(\s+)(.*)$/);
+                if (listMatch) {
+                    const [, indent, dash, space, content] = listMatch;
+                    // Check if content has key: value
+                    const innerKeyValue = content.match(/^([a-zA-Z0-9_\-\.\/]+)(\s*:\s*)(.*)$/);
+                    if (innerKeyValue) {
+                        const [, key, colon, value] = innerKeyValue;
+                        let highlightedValue = highlightYamlValue(value);
+                        return `${indent}<span class="yaml-list-marker">${dash}</span>${space}<span class="yaml-key">${key}</span><span class="yaml-punctuation">${colon}</span>${highlightedValue}`;
+                    }
+                    return `${indent}<span class="yaml-list-marker">${dash}</span>${space}${highlightYamlValue(content)}`;
+                }
+                
+                return line;
+            });
+            
+            return highlightedLines.join('\n');
+        }
+
+        function highlightYamlValue(value) {
+            if (!value || value.trim() === '') return value;
+            
+            const trimmed = value.trim();
+            
+            // Null values
+            if (trimmed === 'null' || trimmed === '~' || trimmed === '"null"') {
+                return value.replace(trimmed, `<span class="yaml-null">${trimmed}</span>`);
+            }
+            
+            // Boolean values
+            if (/^(true|false|yes|no|on|off|"True"|"False")$/i.test(trimmed)) {
+                return value.replace(trimmed, `<span class="yaml-boolean">${trimmed}</span>`);
+            }
+            
+            // Numbers
+            if (/^-?\d+\.?\d*$/.test(trimmed)) {
+                return value.replace(trimmed, `<span class="yaml-number">${trimmed}</span>`);
+            }
+            
+            // Quoted strings
+            if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || 
+                (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+                return value.replace(trimmed, `<span class="yaml-string">${trimmed}</span>`);
+            }
+            
+            // Unquoted strings (if it looks like a value)
+            if (trimmed.length > 0 && !trimmed.includes(':')) {
+                return `<span class="yaml-string">${value}</span>`;
+            }
+            
+            return value;
+        }
+
+        // Format code blocks in text
+        function formatCodeBlocks(text) {
+            // Match <code>...</code> blocks
+            return text.replace(/<code>([\s\S]*?)<\/code>/gi, (match, code) => {
+                // Clean up the code
+                let cleanCode = code
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&amp;/g, '&')
+                    .replace(/&quot;/g, '"')
+                    .trim();
+                
+                // Detect if it's YAML (look for common patterns)
+                const isYaml = /^(kind|apiVersion|metadata|spec|status|name|namespace):/m.test(cleanCode) ||
+                              /^\s*-\s+\w+:/m.test(cleanCode) ||
+                              cleanCode.includes('apiVersion:');
+                
+                const lang = isYaml ? 'yaml' : 'code';
+                const highlighted = isYaml ? highlightYaml(cleanCode) : escapeHtml(cleanCode);
+                const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+                
+                return `
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-lang">${lang}</span>
+                            <button class="copy-btn" onclick="copyCode('${codeId}', this)">Copy</button>
+                        </div>
+                        <div class="code-content" id="${codeId}">${highlighted}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function copyCode(codeId, btn) {
+            const codeEl = document.getElementById(codeId);
+            const text = codeEl.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        function highlight(text, query) {
+            // First format code blocks
+            let formatted = formatCodeBlocks(text);
+            
+            // Then apply search highlighting (but not inside code blocks)
+            if (!query) return formatted;
+            
+            // Split by code blocks, highlight text parts, rejoin
+            const parts = formatted.split(/(<div class="code-block">[\s\S]*?<\/div>\s*<\/div>)/);
+            return parts.map(part => {
+                if (part.startsWith('<div class="code-block">')) {
+                    return part; // Don't highlight inside code blocks
+                }
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                return part.replace(regex, '<mark>$1</mark>');
+            }).join('');
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function truncate(text, maxLength) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        // Expand all on double-click header
+        document.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.topic-header')) {
+                const cards = document.querySelectorAll('.topic-card');
+                const allExpanded = [...cards].every(c => c.classList.contains('expanded'));
+                cards.forEach(c => c.classList.toggle('expanded', !allExpanded));
+            }
+        });
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('docs-theme', newTheme);
+        }
+
+        // Font options
+        const fontFamilies = {
+            'arial': "Arial, sans-serif",
+            'helvetica': "Helvetica, Arial, sans-serif",
+            'verdana': "Verdana, sans-serif",
+            'tahoma': "Tahoma, sans-serif",
+            'times': "'Times New Roman', Times, serif",
+            'georgia': "Georgia, serif",
+            'comic-sans': "'Comic Sans MS', cursive, sans-serif",
+            'roboto': "'Roboto', sans-serif",
+            'open-sans': "'Open Sans', sans-serif",
+            'lato': "'Lato', sans-serif",
+            'montserrat': "'Montserrat', sans-serif",
+            'poppins': "'Poppins', sans-serif",
+            'inter': "'Inter', sans-serif",
+            'raleway': "'Raleway', sans-serif",
+            'nunito': "'Nunito', sans-serif",
+            'quicksand': "'Quicksand', sans-serif"
+        };
+
+        function changeFont(fontKey) {
+            const fontFamily = fontFamilies[fontKey];
+            document.documentElement.style.setProperty('--font-main', fontFamily);
+            document.body.style.fontFamily = fontFamily;
+            localStorage.setItem('docs-font', fontKey);
+        }
+
+        // Load saved preferences
+        (function() {
+            const savedTheme = localStorage.getItem('docs-theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+            
+            const savedFont = localStorage.getItem('docs-font');
+            if (savedFont) {
+                document.getElementById('font-select').value = savedFont;
+                changeFont(savedFont);
+            }
+        })();
+    </script>
+</body>
+</html>

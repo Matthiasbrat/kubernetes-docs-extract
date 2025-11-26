@@ -1,0 +1,123 @@
+[
+  {
+    "title": "How Does Kubelet Know Which Node It Belongs To?",
+    "category": "Investigations",
+    "tags": ["kubelet", "node", "systemd", "kubeadm"],
+    "content": "### The Question\n\nThe Kubernetes documentation says:\n\n> \"Kubernetes checks that a kubelet has registered to the API server that matches the metadata.name field of the Node.\"\n\nBut wait... how does the kubelet actually know which node it's running on? There's no obvious \"node assignment\" visible anywhere.\n\n### Investigation\n\nI tried several commands to figure this out:\n\n```bash\n# Check kubelet config from API\nkubectl get --raw \"/api/v1/nodes/node02/proxy/configz\" | jq\n\n# Check node object\nkubectl get nodes controlplane -o json | jq\n\n# Find kubelet process\nps -eo 'tty,pid,comm' | grep ^? | grep kubelet\n\n# Check kubelet config file\ncat /var/lib/kubelet/config.yaml\n```\n\nEach kubelet has a different PID (obviously), but I couldn't find any information about how each kubelet got \"assigned\" to its node.\n\n### The Discovery\n\nFinally, checking the systemd service status revealed the answer:\n\n```bash\nsystemctl status kubelet | less | grep node\n```\n\nResults:\n- **node01**: `--node-ip=10.0.0.11`\n- **node02**: `--node-ip=10.0.0.12`\n\nThe node IP is passed as an argument to the kubelet binary!\n\n### How It Works\n\nThe IP is stored as an environment variable in `/etc/default/kubelet`:\n\n```bash\nKUBELET_EXTRA_ARGS=--node-ip=10.0.0.12\n```\n\nThe systemd service file (`/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf`) loads this:\n\n```ini\n[Service]\nEnvironment=\"KUBELET_KUBECONFIG_ARGS=--bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf\"\nEnvironment=\"KUBELET_CONFIG_ARGS=--config=/var/lib/kubelet/config.yaml\"\nEnvironmentFile=-/var/lib/kubelet/kubeadm-flags.env\nEnvironmentFile=-/etc/default/kubelet\nExecStart=\nExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS\n```\n\n### The Bootstrap Process\n\n1. `kubeadm init` or `kubeadm join` runs on the node\n2. kubeadm writes the node IP to `/etc/default/kubelet`\n3. kubeadm writes config to `/var/lib/kubelet/config.yaml`\n4. kubeadm starts the kubelet service\n5. Kubelet registers itself to the API server using its IP\n\n### Conclusion\n\nThe documentation statement now makes sense: since the kubelet is a **systemd service on the node itself**, it naturally shares the node's IP address. There's no magic \"scheduling\" of kubelets to nodes — the kubelet IS part of the node, started by kubeadm with the node's own IP as an argument.\n\nKubernetes creates a partial Node object, sets up the agents (kubelet, kube-proxy), and then a controller verifies that the kubelet is functional and updates the Node status accordingly.",
+    "links": [
+      {
+        "title": "kubeadm kubelet.go (where kubeadm starts kubelet)",
+        "url": "https://github.com/kubernetes/kubernetes/blob/db1da72beed99f1fcb2955c2624c7dd3531384ea/cmd/kubeadm/app/cmd/phases/init/kubelet.go#L61"
+      }
+    ]
+  },
+  {
+    "title": "Understanding the Controller Manager Architecture",
+    "category": "Deep Dives",
+    "tags": ["controller-manager", "architecture", "source-code"],
+    "content": "### The Key Insight\n\nThe Kubernetes documentation states:\n\n> \"Logically, each controller is a separate process, but to reduce complexity, they are all compiled into a single binary and run in a single process.\"\n\nThis is interesting — how exactly does this work in the code?\n\n### The Three Key Files\n\nAfter digging through the source code, I found that the controller manager architecture is split across three main files:\n\n| File | Role |\n|------|------|\n| `controllermanager.go` | Entry point, orchestration, leader election |\n| `core.go` | Controller definitions and initialization |\n| `controller_utils.go` | Shared utilities and interfaces |\n\n### How They Work Together\n\n**1. controllermanager.go** (the orchestrator)\n- Creates the main `cobra.Command` for the binary\n- Sets up leader election (only one controller-manager is active at a time)\n- Initializes the `ControllerContext` with clients, informers, and config\n- Calls `StartControllers` to spin up all controllers\n- The Service Account Token Controller runs first (other controllers need its permissions)\n\n**2. core.go** (the controllers)\n- Defines each controller using `ControllerDescriptor` structs\n- Each descriptor has: name, aliases, and an init function\n- Examples: `newServiceLBControllerDescriptor`, `newNodeIpamControllerDescriptor`\n- Init functions actually create and start the controller goroutines\n\n**3. controller_utils.go** (the toolbox)\n- Provides interfaces that controllers implement:\n  - `PodControlInterface` → `RealPodControl` (create/delete pods)\n  - `RSControlInterface` → `RealRSControl` (manage ReplicaSets)\n  - `ControllerRevisionControlInterface` (for StatefulSets, DaemonSets)\n- Utility functions: `FilterActivePods`, `FilterTerminatingPods`, etc.\n- Expectation tracking (to avoid duplicate operations)\n\n### The Pattern\n\n```\ncontrollermanager.go\n       │\n       ├── starts ──→ core.go (controller definitions)\n       │                  │\n       │                  └── uses ──→ controller_utils.go (interfaces)\n       │                                      │\n       └── provides ───────────────────→ ControllerContext\n                                          (clients, informers, config)\n```\n\n### Example: Tracing PodControlInterface\n\n- **Interface**: `controller_utils.go#L463`\n- **Implementation**: `replication/conversion.go#L340`  \n- **Usage**: `replicaset/replica_set.go#L598`\n\nThis pattern (interface → implementation → usage) is consistent throughout the codebase.",
+    "links": [
+      {
+        "title": "controllermanager.go",
+        "url": "https://github.com/kubernetes/kubernetes/blob/2331c028c2000f7d31efeeb405d8151a78a9de9c/cmd/kube-controller-manager/app/controllermanager.go"
+      },
+      {
+        "title": "core.go",
+        "url": "https://github.com/kubernetes/kubernetes/blob/2331c028c2000f7d31efeeb405d8151a78a9de9c/cmd/kube-controller-manager/app/core.go"
+      },
+      {
+        "title": "controller_utils.go",
+        "url": "https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go"
+      },
+      {
+        "title": "build/README.md",
+        "url": "https://github.com/kubernetes/kubernetes/blob/75531ccc9ccd70f59207bd22e91938c4ba5c47da/build/README.md"
+      }
+    ]
+  },
+  {
+    "title": "How Informers and Listers Reduce API Server Load",
+    "category": "Deep Dives",
+    "tags": ["informers", "listers", "event-loop", "performance"],
+    "content": "### The Problem\n\nIf every controller queried the API server every time it needed to check a resource's state, the API server would be overwhelmed. How does Kubernetes solve this?\n\n### The Solution: Event-Driven Caching\n\nKubernetes uses an **event loop architecture** with three key components:\n\n#### 1. Informers\n- Establish a **watch** on the API server for specific resource types\n- Receive real-time notifications of changes (add, update, delete)\n- Update a **local cache** with the latest state\n- Trigger registered **event handlers** when resources change\n\n#### 2. Listers\n- Provide **read-only access** to the local cache\n- Controllers call listers instead of the API server\n- Fast, in-memory lookups with no network overhead\n\n#### 3. Shared Informer Factory\n- Creates and manages multiple informers\n- Ensures **one informer per resource type** is shared across controllers\n- Prevents duplicate watches that would waste API server resources\n\n### The Event Loop\n\n<image src=\"https://raw.githubusercontent.com/Matthiasbrat/kubernetes-docs-extract/refs/heads/main/informer.png\"></image>\n\n### Resync: The Safety Net\n\nInformers periodically **resync** with the API server to ensure cache consistency. This catches any events that might have been missed due to network issues.\n\n### Why This Matters\n\nWithout this architecture:\n- 50 controllers × 100 queries/second = 5000 API calls/second\n- With informers: 1 watch connection, local cache reads\n\nThis is how Kubernetes scales to thousands of nodes.",
+    "links": [
+      {
+        "title": "Efficient Detection of Changes (official docs)",
+        "url": "https://kubernetes.io/docs/reference/using-api/api-concepts/#efficient-detection-of-changes"
+      },
+      {
+        "title": "Demystifying Kubernetes Informer (article)",
+        "url": "https://medium.com/@jeevanragula/demystifying-kubernetes-informer-streamlining-event-driven-workflows-955285166993"
+      },
+      {
+        "title": "Client-Go Informers (Go docs)",
+        "url": "https://pkg.go.dev/k8s.io/client-go/informers"
+      }
+    ]
+  },
+  {
+    "title": "Systemd vs SysVinit: How Services Work",
+    "category": "Linux Fundamentals",
+    "tags": ["systemd", "sysvinit", "services", "daemons"],
+    "content": "### Context\n\nWhen investigating how kubelet runs as a service, I needed to understand the difference between systemd and SysVinit.\n\n### SysVinit (the old way)\n\n- Services are **shell scripts** in `/etc/init.d/`\n- Uses **runlevels** (0-6) to control which services run\n- Sequential startup (slow boot times)\n- Simple but limited\n\nExample:\n```bash\n/etc/init.d/nginx start\n/etc/init.d/nginx stop\n```\n\n### Systemd (the modern way)\n\n- Services are defined in **unit files** (`.service`)\n- Located in `/etc/systemd/system/` or `/lib/systemd/system/`\n- Managed with `systemctl`\n- Features:\n  - **Parallel startup** (faster boot)\n  - **Socket activation** (start on-demand)\n  - **Dependency management** (start A before B)\n  - **Cgroups integration** (resource limits)\n\nExample:\n```bash\nsystemctl start nginx\nsystemctl status nginx\nsystemctl enable nginx  # start on boot\n```\n\n### Key Insight\n\nIn both systems, a \"service\" is just a configuration that tells the init system how to run one or more **daemons** (background processes).\n\n`systemctl list-units --type=service` shows all services, which is an abstraction over the actual processes running on the system.\n\n### Why This Matters for Kubernetes\n\nKubelet runs as a **systemd service** because:\n1. It needs to start on boot\n2. It needs to be restarted if it crashes\n3. It needs proper cgroup isolation\n4. systemd is the standard on modern Linux (Ubuntu, CentOS, etc.)",
+    "links": [
+      {
+        "title": "SysVinit source code",
+        "url": "https://github.com/slicer69/sysvinit/"
+      }
+    ]
+  },
+  {
+    "title": "Why is Kubelet a Service but Kube-proxy a Container?",
+    "category": "Open Questions",
+    "tags": ["kubelet", "kube-proxy", "architecture", "design"],
+    "content": "### The Question\n\nKubelet runs as a **systemd service** directly on the node, while kube-proxy runs as a **DaemonSet pod** (container). Why the difference?\n\n### My Assumptions\n\n**1. Kubelet is tightly coupled to the node**\n\nKubelet needs to:\n- Manage containers via the container runtime (containerd, CRI-O)\n- Mount volumes from the host filesystem\n- Configure networking at the host level\n- Report node status (CPU, memory, disk)\n- Manage cgroups for resource isolation\n\nIt essentially IS the node's Kubernetes agent — it can't run in a container because it manages containers.\n\n**2. Kube-proxy has more flexibility**\n\nKube-proxy just needs to:\n- Configure iptables/IPVS rules for service routing\n- Watch the API server for Service/Endpoint changes\n\nThis CAN run in a container with appropriate privileges (NET_ADMIN capability, host network mode).\n\n**3. CNI dependency angle**\n\nKube-proxy depends on the CNI (network plugin) being functional. Running it as a DaemonSet means:\n- It can be updated/restarted independently\n- Different CNI plugins might replace it entirely (some CNIs handle service routing themselves)\n- It's consistent with the \"everything is a pod\" philosophy\n\n### Still Uncertain\n\nIs this a fundamental architectural requirement, or a historical design decision that could have gone differently?\n\nCould kubelet theoretically run as a container if it had enough privileges? (Probably, but it would be messy...)",
+    "links": []
+  },
+  {
+    "title": "Kubernetes Terminology is Confusing",
+    "category": "Open Questions",
+    "tags": ["terminology", "documentation", "improvement"],
+    "content": "### The Problem\n\nKubernetes uses similar terms for different concepts, making it hard to understand what's happening:\n\n| Term | Used In | Meaning |\n|------|---------|----------|\n| \"state\" | Container | Running, Waiting, Terminated |\n| \"state\" | Pod | (doesn't exist, uses \"phase\") |\n| \"phase\" | Pod | Pending, Running, Succeeded, Failed |\n| \"status\" | Object | The entire `.status` field |\n| \"condition\" | Various | Ready, Initialized, ContainersReady... |\n\n### Specific Confusion\n\n**Pod Phases vs Container States**\n- A Pod can be in phase \"Running\" while a container is in state \"Waiting\"\n- These are related but not the same thing\n- The naming doesn't make this relationship clear\n\n**Object Status**\n- The docs sometimes say \"don't rely on status for debugging\"\n- But status contains conditions, which ARE useful for debugging?\n- Unclear what we should or shouldn't trust\n\n**Probe Outcomes**\n- Success, Failure, Unknown\n- These affect container state, which affects pod phase, which affects...\n- The cascade is hard to follow\n\n### Proposal Ideas\n\n1. **Consistent naming convention**\n   - Always use \"phase\" for high-level lifecycle\n   - Always use \"state\" for detailed current status\n   - Avoid using both interchangeably\n\n2. **Clear hierarchy documentation**\n   - Probe Outcome → Container State → Pod Phase → Deployment Status\n   - Show how each level affects the next\n\n3. **Debugging guide**\n   - Explicitly state which fields to check for which problems\n   - \"If your pod won't start, check X. If it keeps restarting, check Y.\"",
+    "links": []
+  },
+  {
+    "title": "Controller Utils Cheat Sheet",
+    "category": "Reference",
+    "tags": ["controller", "utilities", "api"],
+    "content": "### Overview\n\nThe `controller_utils.go` file is the shared toolbox for all Kubernetes controllers.\n\n### Resync Functions\n\n| Function | Purpose |\n|----------|----------|\n| `NoResyncPeriodFunc` | Returns 0 (no periodic resync) |\n| `StaticResyncPeriodFunc` | Returns a fixed resync interval |\n\n### Expectation Tracking\n\nControllers use \"expectations\" to avoid duplicate work:\n\n| Type | Purpose |\n|------|----------|\n| `ControllerExpectations` | Track expected creates/deletes |\n| `ControlleeExpectations` | Per-object expectations |\n| `UIDTrackingControllerExpectations` | Track by UID |\n\nExample: ReplicaSet controller expects to create 3 pods. It won't try to create more until those 3 are observed.\n\n### Control Interfaces\n\n**Pods:**\n- `PodControlInterface` (interface)\n- `RealPodControl` (production)\n- `FakePodControl` (testing)\n- Methods: `CreatePods`, `CreatePodsWithGenerateName`, `DeletePod`\n\n**ReplicaSets:**\n- `RSControlInterface` / `RealRSControl`\n\n**Controller Revisions:**\n- `ControllerRevisionControlInterface` / `RealControllerRevisionControl`\n\n### Filtering Functions\n\n```go\nFilterActivePods(pods)       // Exclude terminated pods\nFilterTerminatingPods(pods)  // Only terminating pods\nFilterActiveReplicaSets(rs)  // Exclude deleted RS\n```\n\n### Sorting Functions\n\n```go\nControllersByCreationTimestamp  // Sort by age\nReplicaSetsBySizeOlder          // Smaller + older first\nReplicaSetsBySizeNewer          // Smaller + newer first\n```\n\n### Node Management\n\n```go\nAddOrUpdateTaintOnNode(node, taint)\nRemoveTaintOffNode(node, taint)\nPatchNodeTaints(node, taints)\nAddOrUpdateLabelsOnNode(node, labels)\n```",
+    "links": [
+      {
+        "title": "controller_utils.go source",
+        "url": "https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go"
+      }
+    ]
+  },
+  {
+    "title": "Useful Kubernetes Links",
+    "category": "Reference",
+    "tags": ["links", "documentation", "learning"],
+    "content": "### Official Documentation\n\n- [API Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md) — How K8s APIs are designed\n- [kubectl docs](https://kubectl.docs.kubernetes.io/) — Official kubectl reference\n- [DNS Horizontal Autoscaling](https://kubernetes.io/docs/tasks/administer-cluster/dns-horizontal-autoscaling/) — Scale CoreDNS based on cluster size\n\n### Advanced Topics\n\n- [Cluster API](https://cluster-api.sigs.k8s.io/) — Declarative cluster lifecycle management\n- [Hierarchical Namespaces](https://kubernetes.io/blog/2020/08/14/introducing-hierarchical-namespaces/) — Nested namespace structure\n- [Hosted Control Planes (OpenShift)](https://docs.redhat.com/en/documentation/openshift_container_platform/4.15/html-single/hosted_control_planes/index) — Run control planes as pods\n\n### Design & Architecture\n\n- [Protobuf Design Proposal](https://github.com/kubernetes/design-proposals-archive/blob/main/api-machinery/protobuf.md) — Why K8s uses protobuf\n- [Termination Order](https://github.com/kubernetes/kubernetes/blob/2d0a4f75560154454682b193b42813159b20f284/pkg/kubelet/kuberuntime/kuberuntime_termination_order.go) — How pod termination works\n\n### Learning Resources\n\n- [K8s Academy Fundamentals](https://github.com/K8sAcademy/Fundamentals-HandsOn) — Hands-on exercises\n- [Kubernetes Goat](https://madhuakula.com/kubernetes-goat/) — Security training environment",
+    "links": [
+      {
+        "title": "API Conventions",
+        "url": "https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md"
+      },
+      {
+        "title": "Cluster API",
+        "url": "https://cluster-api.sigs.k8s.io/"
+      },
+      {
+        "title": "Kubernetes Goat",
+        "url": "https://madhuakula.com/kubernetes-goat/"
+      }
+    ]
+  },
+  {
+    "title": "TODO: Efficient Controller Strategies",
+    "category": "TODOs",
+    "tags": ["todo", "research", "controllers"],
+    "content": "### Research Topic\n\nWrite up a deep dive on efficient controller patterns in Kubernetes.\n\n### Areas to Cover\n\n- **Rate limiting** — How controllers avoid overwhelming the API server\n- **Work queues** — The queue patterns used (rate-limited, delayed, etc.)\n- **Caching** — Beyond informers, what other caching happens?\n- **Reconciliation loops** — Best practices for idempotent reconciliation\n- **Leader election** — How HA controllers avoid conflicts\n- **Optimistic concurrency** — ResourceVersion and conflict handling\n- **Exponential backoff** — Handling transient failures\n\n### Questions to Answer\n\n1. What's the difference between `workqueue.NewRateLimitingQueue` and `workqueue.NewDelayingQueue`?\n2. How does a controller know when to retry vs. give up?\n3. What happens if two controller replicas process the same object?",
+    "links": []
+  }
+]

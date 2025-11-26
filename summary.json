@@ -340,7 +340,7 @@
                 "reference": ""
             },
             {
-                "paragraph": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n\tname: nginx-deployment\nspec:\n\tselector:\n\t\tmatchLabels:\n\t\t\tapp: nginx\n\treplicas: 2 # tells deployment to run 2 pods matching the template\n\ttemplate:\n\t\tmetadata:\n\t\t\tlabels:\n\t\t\t\tapp: nginx\n\t\tspec:\n\t\t\tcontainers:\n\t\t\t- name: nginx\n\t\t\t\timage: nginx:1.14.2\n\t\t\t\tports:\n\t\t\t\t- containerPort: 80\n",
+                "paragraph": "<code>apiVersion: apps/v1\nkind: Deployment\nmetadata:\n\tname: nginx-deployment\nspec:\n\tselector:\n\t\tmatchLabels:\n\t\t\tapp: nginx\n\treplicas: 2 # tells deployment to run 2 pods matching the template\n\ttemplate:\n\t\tmetadata:\n\t\t\tlabels:\n\t\t\t\tapp: nginx\n\t\tspec:\n\t\t\tcontainers:\n\t\t\t- name: nginx\n\t\t\t\timage: nginx:1.14.2\n\t\t\t\tports:\n\t\t\t\t- containerPort: 80\n</code>",
                 "reference": ""
             },
             {
@@ -1380,7 +1380,7 @@
                 "reference": ""
             },
             {
-                "paragraph": "apiVersion: v1 kind: Pod metadata: name: nginx spec: containers: - name: nginx image: nginx:1.14.2 ports: - containerPort: 80",
+                "paragraph": "<code>apiVersion: v1\nkind: Pod\nmetadata:\n\tname: nginx \nspec:\n\tcontainers:\n\t\t- name: nginx\n\t\t\timage: nginx:1.14.2\n\t\t\tports:\n\t\t- containerPort: 80</code>",
                 "reference": ""
             },
             {
@@ -1424,7 +1424,7 @@
                 "reference": ""
             },
             {
-                "paragraph": "apiVersion: batch/v1 kind: Job metadata: name: hello spec: template: # This is the pod template spec: \"containers: - name: hello image: busybox: 1.28 command: ['sh', '-c', 'echo \"Hello, Kubernetes!\" && sleep 3600'] \"title\": \"tartPolicy: OnFailure # The pod template ends here\"",
+                "paragraph": "<code>apiVersion: batch/v1\nkind: Job\nmetadata:\n\tname: hello\nspec:\n\ttemplate:\n\t\t# This is the pod template\n\t\tspec:\n\t\t\tcontainers:\n\t\t\t- name: hello\n\t\t\t  image: busybox:1.28\n\t\t\t  command: ['sh', '-c', 'echo \"Hello, Kubernetes!\" && sleep 3600']\n\t\trestartPolicy: OnFailure\n\t\t# The pod template ends here</code>",
                 "reference": ""
             },
             {
@@ -1646,7 +1646,11 @@
                 "reference": ""
             },
             {
-                "paragraph": "If Kubernetes cannot find such a condition in the status.conditions field of a Pod, the status of the condition is defaulted to \"False\". Here is an example: kind: Pod ... spec: readinessGates: - conditionType: \"www.example.com/feature-1\" status: conditions: - type: Ready # a built in PodCondition status: \"False\" lastProbeTime: \"null\" lastTransitionTime: 2018-01-01T00:00:00Z - type: \"www.example.com/feature-1\" # an extra PodCondition status: \"False\" lastProbeTime: null lastTransitionTime: 2018-01-01T00:00:00Z containerStatuses: - containerID: docker://abcd... ready: true ...{\"paragraph\": \"For a Pod that uses custom conditions, that Pod is evaluated to be ready only when both the following statements apply: All containers in the Pod are ready. All conditions specified in readinessGates are True.\"",
+                "paragraph": "If Kubernetes cannot find such a condition in the status.conditions field of a Pod, the status of the condition is defaulted to \"False\". Here is an example: <code>kind: Pod\n...\nspec:\n\treadinessGates:\n\t- conditionType: \"www.example.com/feature-1\"\nstatus:\n\tconditions:\n\t- type: Ready # a built in PodCondition\n\t  status: \"False\"\n\t  lastProbeTime: null\n\t  lastTransitionTime: 2018-01-01T00:00:00Z\n\t- type: \"www.example.com/feature-1\" # an extra PodCondition\n\t  status: \"False\"\n\t  lastProbeTime: null\n\t  lastTransitionTime: 2018-01-01T00:00:00Z\n\tcontainerStatuses:\n\t- containerID: docker://abcd...\n\t  ready: true\n\t  ...</code>",
+                "reference": ""
+            },
+            {
+                "paragraph": "For a Pod that uses custom conditions, that Pod is evaluated to be ready only when both the following statements apply: All containers in the Pod are ready. All conditions specified in readinessGates are True.",
                 "reference": ""
             },
             {
@@ -1772,7 +1776,7 @@
                 "reference": ""
             },
             {
-                "paragraph": "This example defines a simple Pod that has two init containers. The first waits for myservice, and the second waits for mydb. Once both init containers complete, the Pod runs the app container from its spec section. apiVersion: v1 kind: Pod metadata: name: myapp-pod labels: app.kubernetes.io/name: MyApp spec: containers: - name: myapp-container image: busybox:1.28 command: ['sh', '-c', 'echo The app is running! && sleep 3600'] initContainers: - name: init-myservice image: busybox:1.28 command: ['sh', '-c', \"until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done\"] - name: init-mydb image: busybox:1.28 command: ['sh', '-c', \"until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done\"]",
+                "paragraph": "This example defines a simple Pod that has two init containers. The first waits for myservice, and the second waits for mydb. Once both init containers complete, the Pod runs the app container from its spec section. <code>apiVersion: v1\nkind: Pod\nmetadata:\n\tname: myapp-pod\n\tlabels:\n\t\tapp.kubernetes.io/name: MyApp\nspec:\n\tcontainers:\n\t- name: myapp-container\n\t  image: busybox:1.28\n\t  command: ['sh', '-c', 'echo The app is running! && sleep 3600']\n\tinitContainers:\n\t- name: init-myservice\n\t  image: busybox:1.28\n\t  command: ['sh', '-c', \"until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done\"]\n\t- name: init-mydb\n\t  image: busybox:1.28\n\t  command: ['sh', '-c', \"until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done\"]</code>",
                 "reference": ""
             },
             {
@@ -2182,7 +2186,7 @@
                 "reference": ""
             },
             {
-                "paragraph": "apiVersion: apps/v1 kind: Deployment metadata: name: nginx-deployment labels: app: nginx spec: replicas: 3 selector: matchLabels: app: nginx template: metadata: labels: app: nginx spec: containers: - name: nginx image: nginx:1.14.2 ports: - containerPort: 80",
+                "paragraph": "<code>apiVersion: apps/v1\nkind: Deployment\nmetadata:\n\tname: nginx-deployment\n\tlabels:\n\t\tapp: nginx\nspec:\n\treplicas: 3\n\tselector:\n\t\tmatchLabels:\n\t\t\tapp: nginx\n\ttemplate:\n\t\tmetadata:\n\t\t\tlabels:\n\t\t\t\tapp: nginx\n\t\tspec:\n\t\t\tcontainers:\n\t\t\t- name: nginx\n\t\t\t  image: nginx:1.14.2\n\t\t\t  ports:\n\t\t\t  - containerPort: 80</code>",
                 "reference": ""
             },
             {
